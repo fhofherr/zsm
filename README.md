@@ -64,6 +64,23 @@ awkward situation, that already removed snapshots are re-transmitted to
 a target host it keeps the implementation of `send` simple and straight
 forward.
 
+## Development
+
+### ZFS in Vagrant
+
+Since ZFS requires a kernel module to be loaded the tests cannot be
+executed in a Docker container on a host machine without ZFS support.
+Therefore this repository includes a `Vagrantfile` with OpenZFS
+installed.
+
+Some providers don't support synced folders out of the box (e.b. the
+libvirt-provider). In this cases it is necessary to call
+
+    vagrant rsync-auto
+
+after starting the box. This sync is only uni-directional from the host
+to the guest machine.
+
 ## License
 
 Copyright © 2020 Ferdinand Hofherr
