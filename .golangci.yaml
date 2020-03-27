@@ -1,0 +1,40 @@
+---
+linters-settings:
+  gocyclo:
+    min-complexity: 15
+  misspell:
+    locale: "US"
+  lll:
+    line-length: 120
+    tab-width: 4
+
+linters:
+  disable-all: true
+  enable:
+    - bodyclose
+    - deadcode
+    - errcheck
+    - gocritic
+    - gocyclo
+    - goimports
+    - gosec
+    - gosimple
+    - govet
+    - ineffassign
+    - lll
+    - misspell
+    - prealloc
+    - scopelint
+    - staticcheck
+    - structcheck
+    - typecheck
+    - unparam
+    - unused
+    - varcheck
+    - whitespace
+
+issues:
+  exclude-rules:
+    - path: _test\.go
+      linters:
+        - gosec
