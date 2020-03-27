@@ -4,10 +4,10 @@
 : "${POOL_TYPE:="raidz2"}"
 : "${POOL_SIZE:=4}"
 
-TEST_DATA_SETS=(
-    "$POOL_NAME/ds_1"
-    "$POOL_NAME/ds_2"
-    "$POOL_NAME/ds_2/nested_ds_1"
+TEST_FILE_SYSTEMS=(
+    "$POOL_NAME/fs_1"
+    "$POOL_NAME/fs_2"
+    "$POOL_NAME/fs_2/nested_fs_1"
 )
 
 mkdir -p "$DRIVE_FILES_DIR"
@@ -24,8 +24,8 @@ done
 echo "Creating zfs pool from drive files"
 zpool create "$POOL_NAME" "$POOL_TYPE" "${DRIVE_FILES[@]}"
 
-# Create test data sets
-for ds in "${TEST_DATA_SETS[@]}"; do
+# Create test file systems
+for ds in "${TEST_FILE_SYSTEMS[@]}"; do
     echo "Creating test data set: $ds"
     zfs create "$ds"
 done
