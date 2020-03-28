@@ -1,0 +1,5 @@
+#!/usr/bin/env sh
+
+# This file is deliberately not executable.
+
+exit 1
