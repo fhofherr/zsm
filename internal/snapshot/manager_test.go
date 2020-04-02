@@ -108,6 +108,51 @@ func TestManager_CreateSnapshot(t *testing.T) {
 
 		assert.EqualError(t, err, fmt.Sprintf("unknown filesystem: %q", unknownFileSystem))
 	})
+
+	t.Run("ignore excluded file systems", func(t *testing.T) {
+		excludedFileSystems := []string{
+			"zsm_test/fs_1",
+			"zsm_test/fs_2/nested_fs_1",
+		}
+
+		adapter := &snapshot.MockZFSAdapter{}
+		adapter.Test(t)
+		adapter.On("List", zfs.FileSystem).Return(allFileSystems, nil)
+
+		var opts []snapshot.CreateOption
+		for _, fs := range allFileSystems {
+			if isFileSystemExcluded(excludedFileSystems, fs) {
+				// Sometimes the file systems might be specified with a
+				// leading slash. This is wrong, but we want to be liberal
+				// in what we accept.
+				fs = "/" + fs
+				opts = append(opts, snapshot.ExcludeFileSystem(fs))
+				continue
+			}
+			fs := fs
+			adapter.On("CreateSnapshot", mock.MatchedBy(func(n interface{}) bool {
+				if name, ok := n.(string); ok {
+					return AssertSnapshotFormat(t, fs, name)
+				}
+				t.Errorf("%v is not string", n)
+				return false
+			})).Return(nil)
+		}
+
+		mgr := &snapshot.Manager{ZFS: adapter}
+		err := mgr.CreateSnapshot(opts...)
+		assert.NoError(t, err)
+		adapter.AssertExpectations(t)
+	})
+}
+
+func isFileSystemExcluded(excludedFileSystems []string, fs string) bool {
+	for _, efs := range excludedFileSystems {
+		if fs == efs {
+			return true
+		}
+	}
+	return false
 }
 
 func AssertSnapshotFormat(t *testing.T, fsName, snapName string) bool {

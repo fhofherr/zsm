@@ -1,5 +1,7 @@
 ---
 linters-settings:
+  errcheck:
+    exclude: .errcheck_exclude.txt
   gocyclo:
     min-complexity: 15
   misspell:

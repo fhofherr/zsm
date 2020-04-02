@@ -3,6 +3,7 @@ package snapshot
 import (
 	"errors"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/fhofherr/zsm/internal/zfs"
@@ -20,7 +21,8 @@ type ZFSAdapter interface {
 type CreateOption func(*createOpts)
 
 type createOpts struct {
-	FileSystems []string
+	FileSystems         []string
+	ExcludedFileSystems map[string]bool
 }
 
 // FromFileSystem makes CreateSnapshot create a snapshot of only the passed
@@ -29,6 +31,18 @@ type createOpts struct {
 func FromFileSystem(fsName string) CreateOption {
 	return func(o *createOpts) {
 		o.FileSystems = append(o.FileSystems, fsName)
+	}
+}
+
+// ExcludeFileSystem marks the passed file System as excluded from creating
+// snapshots.
+func ExcludeFileSystem(fsName string) CreateOption {
+	return func(o *createOpts) {
+		if o.ExcludedFileSystems == nil {
+			o.ExcludedFileSystems = make(map[string]bool)
+		}
+		fsName = strings.TrimPrefix(fsName, "/")
+		o.ExcludedFileSystems[fsName] = true
 	}
 }
 
@@ -51,22 +65,24 @@ func (m *Manager) CreateSnapshot(opts ...CreateOption) error {
 		opt(snapOpts)
 	}
 
-	fileSystems, err := m.ZFS.List(zfs.FileSystem)
+	allFileSystems, err := m.ZFS.List(zfs.FileSystem)
 	if err != nil {
 		return fmt.Errorf("create snapshot: %w", err)
 	}
+
+	selectedFileSystems := snapOpts.FileSystems
 	// If no file systems are passed make snapshots of all available file
 	// systems.
-	if len(snapOpts.FileSystems) == 0 {
-		snapOpts.FileSystems = fileSystems
+	if len(selectedFileSystems) == 0 {
+		selectedFileSystems = allFileSystems
 	}
-
-	if err := selectedFileSystemsKnown(fileSystems, snapOpts.FileSystems); err != nil {
+	if err := selectedFileSystemsKnown(allFileSystems, selectedFileSystems); err != nil {
 		return err
 	}
+	selectedFileSystems = removeExcludedFileSystems(selectedFileSystems, snapOpts.ExcludedFileSystems)
 
 	tsStr := time.Now().UTC().Format(time.RFC3339)
-	for _, fs := range snapOpts.FileSystems {
+	for _, fs := range selectedFileSystems {
 		name := fmt.Sprintf("%s@%s", fs, tsStr)
 		if err := m.ZFS.CreateSnapshot(name); err != nil {
 			return fmt.Errorf("create snapshot: %w", err)
@@ -86,4 +102,15 @@ func selectedFileSystemsKnown(all, selected []string) error {
 		}
 	}
 	return nil
+}
+
+func removeExcludedFileSystems(selected []string, excluded map[string]bool) []string {
+	remaining := make([]string, 0, len(selected))
+	for _, fs := range selected {
+		if excluded[fs] {
+			continue
+		}
+		remaining = append(remaining, fs)
+	}
+	return remaining
 }
