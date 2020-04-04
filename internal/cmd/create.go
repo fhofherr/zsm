@@ -18,7 +18,11 @@ func newCreateCommand(v *viper.Viper, sm *snapshot.Manager) *cobra.Command {
 		Long: `Creates snapshots for all ZFS file systems, except for those explicitly excluded.
 
 If [FILE SYSTEM] is passed, then a snapshot of only the passed file system is
-created.`,
+created unless [FILE SYSTEM] is marked as excluded.
+
+The created snapshots start with the same name as the dataset and are suffixed with @<TIMESTAMP>
+where <TIMESTAMP> is an RFC3339 timestamp. The time zone of the <TIMESTAMP> is always UTC regardles
+of the system time.`,
 		Args: cobra.RangeArgs(0, 1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			var opts []snapshot.CreateOption

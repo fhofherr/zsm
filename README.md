@@ -9,17 +9,6 @@ The following is a list of planed features. Completed features are
 documented below. The [CHANGELOG](CHANGELOG.md) provides detail about
 the version in which a certain feature was made available.
 
-### Create snapshots
-
-When called with `zsm create` snapshots of all datasets except for those
-listed in a blacklist should be created. The snapshots start with the
-same name as the dataset and are suffixed with `@<TIMESTAMP>` where
-`<TIMESTAMP>` is an [RFC3339](https://tools.ietf.org/html/rfc3339)
-timestamp. The `<TIMESTAMP>` is always UTC regardles of the system time.
-
-Additionally `zsm` supports the invocation `zsm create <dataset>`. This
-creates a snapshot of the the dataset `<dataset>`.
-
 ### Clean snapshots
 
 If called with `zsm clean` `zsm` removes all but the last *h* hourly,

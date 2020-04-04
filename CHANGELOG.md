@@ -10,4 +10,7 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+* `zsm create` command which allows to create snapshots of a single
+  specified or all availalbe file systems.
+
 [Unreleased]: https://github.com/fhofherr/zsm
