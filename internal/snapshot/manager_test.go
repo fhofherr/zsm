@@ -3,9 +3,7 @@ package snapshot_test
 import (
 	"errors"
 	"fmt"
-	"strings"
 	"testing"
-	"time"
 
 	"github.com/fhofherr/zsm/internal/snapshot"
 	"github.com/fhofherr/zsm/internal/zfs"
@@ -56,7 +54,7 @@ func TestManager_CreateSnapshot(t *testing.T) {
 			fs := fs
 			adapter.On("CreateSnapshot", mock.MatchedBy(func(n interface{}) bool {
 				if name, ok := n.(string); ok {
-					return AssertSnapshotFormat(t, fs, name)
+					return snapshot.AssertNameFormat(t, fs, name)
 				}
 				t.Errorf("%v is not string", n)
 				return false
@@ -81,7 +79,7 @@ func TestManager_CreateSnapshot(t *testing.T) {
 			fs := fs
 			adapter.On("CreateSnapshot", mock.MatchedBy(func(n interface{}) bool {
 				if name, ok := n.(string); ok {
-					return AssertSnapshotFormat(t, fs, name)
+					return snapshot.AssertNameFormat(t, fs, name)
 				}
 				t.Errorf("%v is not string", n)
 				return false
@@ -132,7 +130,7 @@ func TestManager_CreateSnapshot(t *testing.T) {
 			fs := fs
 			adapter.On("CreateSnapshot", mock.MatchedBy(func(n interface{}) bool {
 				if name, ok := n.(string); ok {
-					return AssertSnapshotFormat(t, fs, name)
+					return snapshot.AssertNameFormat(t, fs, name)
 				}
 				t.Errorf("%v is not string", n)
 				return false
@@ -153,25 +151,4 @@ func isFileSystemExcluded(excludedFileSystems []string, fs string) bool {
 		}
 	}
 	return false
-}
-
-func AssertSnapshotFormat(t *testing.T, fsName, snapName string) bool {
-	parts := strings.Split(snapName, "@")
-	if len(parts) != 2 {
-		t.Errorf("did not contain exactly one @: %s", snapName)
-		return false
-	}
-	if parts[0] != fsName {
-		return false
-	}
-	ts, err := time.Parse(time.RFC3339, parts[1])
-	if err != nil {
-		t.Errorf("parse timestamp: %v", err)
-		return false
-	}
-	if ts.Location() != time.UTC {
-		t.Errorf("timestamp not UTC: %v", ts.Location())
-		return false
-	}
-	return true
 }

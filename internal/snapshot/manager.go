@@ -81,10 +81,10 @@ func (m *Manager) CreateSnapshot(opts ...CreateOption) error {
 	}
 	selectedFileSystems = removeExcludedFileSystems(selectedFileSystems, snapOpts.ExcludedFileSystems)
 
-	tsStr := time.Now().UTC().Format(time.RFC3339)
+	ts := time.Now().UTC()
 	for _, fs := range selectedFileSystems {
-		name := fmt.Sprintf("%s@%s", fs, tsStr)
-		if err := m.ZFS.CreateSnapshot(name); err != nil {
+		name := Name{FileSystem: fs, Timestamp: ts}
+		if err := m.ZFS.CreateSnapshot(name.String()); err != nil {
 			return fmt.Errorf("create snapshot: %w", err)
 		}
 	}
