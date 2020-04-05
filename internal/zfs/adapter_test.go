@@ -64,6 +64,14 @@ func TestAdapter_List(t *testing.T) {
 			expected: []string{"zsm_test", "zsm_test/fs_1", "zsm_test/fs_2", "zsm_test/fs_2/nested_fs_1"},
 		},
 		{
+			name: "list all snapshots",
+			typ:  zfs.Snapshot,
+			expected: []string{
+				"zsm_test@2020-04-05T09:04:24.01925437Z",
+				"zsm_test/fs_1@2020-04-05T09:04:24.01925437Z",
+			},
+		},
+		{
 			name:        "list fails with exit code",
 			typ:         zfs.FileSystem,
 			zfsExitCode: 10,

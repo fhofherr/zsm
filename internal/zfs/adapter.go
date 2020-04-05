@@ -15,6 +15,9 @@ type ListType string
 const (
 	// FileSystem causes List to list ZFS file systems only.
 	FileSystem ListType = "filesystem"
+
+	// Snapshot causes List to list ZFS snapshots only.
+	Snapshot ListType = "snapshot"
 )
 
 // Adapter wraps the CmdFunc for a zfs executable.
