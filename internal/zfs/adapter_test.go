@@ -3,7 +3,6 @@ package zfs_test
 import (
 	"errors"
 	"fmt"
-	"os"
 	"path/filepath"
 	"testing"
 
@@ -88,7 +87,7 @@ func TestAdapter_List(t *testing.T) {
 		},
 	}
 
-	zfs.Fake()
+	fakeZFS := zfs.Fake(t)
 	for _, tt := range tests {
 		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
@@ -100,8 +99,9 @@ func TestAdapter_List(t *testing.T) {
 				fmt.Sprintf("%s=%s", zfs.KeyFakeZFSErrFile, filepath.Join("testdata", t.Name(), "zfs_list.err")),
 				fmt.Sprintf("%s=%d", zfs.KeyFakeZFSExitCode, tt.zfsExitCode),
 			}
-			fakeZFS := zfs.NewCmdFunc(os.Args[0], "-test.run=TestAdapter_List")
-			fakeZFS = zfs.WithEnv(fakeZFS, env)
+
+			// Shadow the top-level fakeZFS variable!
+			fakeZFS := zfs.WithEnv(fakeZFS, env)
 			fakeZFS = zfs.SwallowFurtherArgs(fakeZFS, &swallowedArgs)
 			adapter := zfs.Adapter(fakeZFS)
 
@@ -148,7 +148,7 @@ func TestAdapter_CreateSnapshot(t *testing.T) {
 		},
 	}
 
-	zfs.Fake()
+	fakeZFS := zfs.Fake(t)
 	for _, tt := range tests {
 		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
@@ -159,8 +159,8 @@ func TestAdapter_CreateSnapshot(t *testing.T) {
 				fmt.Sprintf("%s=%s", zfs.KeyFakeZFSErrFile, filepath.Join("testdata", t.Name(), "zfs_snapshot.err")),
 				fmt.Sprintf("%s=%d", zfs.KeyFakeZFSExitCode, tt.zfsExitCode),
 			}
-			fakeZFS := zfs.NewCmdFunc(os.Args[0], "-test.run=TestAdapter_CreateSnapshot")
-			fakeZFS = zfs.WithEnv(fakeZFS, env)
+			// Shadow the top-level fakeZFS variable!
+			fakeZFS := zfs.WithEnv(fakeZFS, env)
 			fakeZFS = zfs.SwallowFurtherArgs(fakeZFS, &swallowedArgs)
 			adapter := zfs.Adapter(fakeZFS)
 

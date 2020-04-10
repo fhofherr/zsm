@@ -5,6 +5,8 @@ import (
 	"io/ioutil"
 	"os"
 	"strconv"
+	"strings"
+	"testing"
 )
 
 const (
@@ -33,9 +35,13 @@ const (
 // Fake mocks the zfs program.
 //
 // Fake calls os.Exit!
-func Fake() {
+func Fake(t *testing.T) CmdFunc {
+	testName := t.Name()
+	if strings.ContainsRune(testName, '/') {
+		t.Fatal("Can't call fake from a sub-test")
+	}
 	if os.Getenv(KeyIsFakeZFSCmd) != "1" {
-		return
+		return NewCmdFunc(os.Args[0], fmt.Sprintf("-test.run=%s", testName))
 	}
 	zfsExitCode := os.Getenv(KeyFakeZFSExitCode)
 	if zfsExitCode == "" {
@@ -68,4 +74,5 @@ func Fake() {
 	}
 
 	os.Exit(ec)
+	return nil // never reached as we called exit above
 }
