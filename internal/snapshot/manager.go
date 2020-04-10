@@ -52,12 +52,12 @@ type Manager struct {
 	ZFS ZFSAdapter
 }
 
-// CreateSnapshot creates a snapshot of the ZFS file system.
+// CreateSnapshots creates snapshots of the ZFS file system.
 //
-// By default CreateSnapshot creates snapshots of all ZFS file systems
+// By default CreateSnapshots creates snapshots of all ZFS file systems
 // available. This behavior can be modified by passing one or more
 // CreateOptions.
-func (m *Manager) CreateSnapshot(opts ...CreateOption) error {
+func (m *Manager) CreateSnapshots(opts ...CreateOption) error {
 	if m.ZFS == nil {
 		return errors.New("initialization error: ZFSAdapter nil")
 	}

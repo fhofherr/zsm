@@ -33,7 +33,7 @@ of the system time.`,
 			for _, e := range exclude {
 				opts = append(opts, snapshot.ExcludeFileSystem(e))
 			}
-			if err := sm.CreateSnapshot(opts...); err != nil {
+			if err := sm.CreateSnapshots(opts...); err != nil {
 				return fmt.Errorf("%s: %w", cmd.Name(), err)
 			}
 			return nil

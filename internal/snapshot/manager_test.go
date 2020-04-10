@@ -23,7 +23,7 @@ func TestManager_Initialization(t *testing.T) {
 			name: "CreateSnapshot fails on missing ZFSAdapter",
 			mgr:  &snapshot.Manager{},
 			callMgr: func(mgr *snapshot.Manager) error {
-				return mgr.CreateSnapshot()
+				return mgr.CreateSnapshots()
 			},
 			expectedErr: errors.New("initialization error: ZFSAdapter nil"),
 		},
@@ -38,7 +38,7 @@ func TestManager_Initialization(t *testing.T) {
 	}
 }
 
-func TestManager_CreateSnapshot(t *testing.T) {
+func TestManager_CreateSnapshots(t *testing.T) {
 	allFileSystems := []string{
 		"zsm_test",
 		"zsm_test/fs_1",
@@ -62,7 +62,7 @@ func TestManager_CreateSnapshot(t *testing.T) {
 			})).Return(nil)
 		}
 		mgr := &snapshot.Manager{ZFS: adapter}
-		err := mgr.CreateSnapshot()
+		err := mgr.CreateSnapshots()
 
 		assert.NoError(t, err)
 		adapter.AssertExpectations(t)
@@ -89,7 +89,7 @@ func TestManager_CreateSnapshot(t *testing.T) {
 		}
 
 		mgr := &snapshot.Manager{ZFS: adapter}
-		err := mgr.CreateSnapshot(opts...)
+		err := mgr.CreateSnapshots(opts...)
 
 		assert.NoError(t, err)
 		adapter.AssertExpectations(t)
@@ -103,7 +103,7 @@ func TestManager_CreateSnapshot(t *testing.T) {
 		adapter.On("List", zfs.FileSystem).Return(allFileSystems, nil)
 
 		mgr := &snapshot.Manager{ZFS: adapter}
-		err := mgr.CreateSnapshot(snapshot.FromFileSystem(unknownFileSystem))
+		err := mgr.CreateSnapshots(snapshot.FromFileSystem(unknownFileSystem))
 
 		assert.EqualError(t, err, fmt.Sprintf("unknown filesystem: %q", unknownFileSystem))
 	})
@@ -139,7 +139,7 @@ func TestManager_CreateSnapshot(t *testing.T) {
 		}
 
 		mgr := &snapshot.Manager{ZFS: adapter}
-		err := mgr.CreateSnapshot(opts...)
+		err := mgr.CreateSnapshots(opts...)
 		assert.NoError(t, err)
 		adapter.AssertExpectations(t)
 	})
