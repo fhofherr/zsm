@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"path/filepath"
+	"strconv"
 	"testing"
 
 	"github.com/fhofherr/zsm/internal/zfs"
@@ -93,15 +94,13 @@ func TestAdapter_List(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			var swallowedArgs []string
 
-			env := []string{
-				fmt.Sprintf("%s=1", zfs.KeyIsFakeZFSCmd),
-				fmt.Sprintf("%s=%s", zfs.KeyFakeZFSOutFile, filepath.Join("testdata", t.Name(), "zfs_list.out")),
-				fmt.Sprintf("%s=%s", zfs.KeyFakeZFSErrFile, filepath.Join("testdata", t.Name(), "zfs_list.err")),
-				fmt.Sprintf("%s=%d", zfs.KeyFakeZFSExitCode, tt.zfsExitCode),
-			}
-
 			// Shadow the top-level fakeZFS variable!
-			fakeZFS := zfs.WithEnv(fakeZFS, env)
+			fakeZFS := zfs.WithEnv(fakeZFS, map[string]string{
+				zfs.KeyIsFakeZFSCmd:    "1",
+				zfs.KeyFakeZFSOutFile:  filepath.Join("testdata", t.Name(), "zfs_list.out"),
+				zfs.KeyFakeZFSErrFile:  filepath.Join("testdata", t.Name(), "zfs_list.err"),
+				zfs.KeyFakeZFSExitCode: strconv.Itoa(tt.zfsExitCode),
+			})
 			fakeZFS = zfs.SwallowFurtherArgs(fakeZFS, &swallowedArgs)
 			adapter := zfs.Adapter(fakeZFS)
 
@@ -154,13 +153,12 @@ func TestAdapter_CreateSnapshot(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			var swallowedArgs []string
 
-			env := []string{
-				fmt.Sprintf("%s=1", zfs.KeyIsFakeZFSCmd),
-				fmt.Sprintf("%s=%s", zfs.KeyFakeZFSErrFile, filepath.Join("testdata", t.Name(), "zfs_snapshot.err")),
-				fmt.Sprintf("%s=%d", zfs.KeyFakeZFSExitCode, tt.zfsExitCode),
-			}
 			// Shadow the top-level fakeZFS variable!
-			fakeZFS := zfs.WithEnv(fakeZFS, env)
+			fakeZFS := zfs.WithEnv(fakeZFS, map[string]string{
+				zfs.KeyIsFakeZFSCmd:    "1",
+				zfs.KeyFakeZFSErrFile:  filepath.Join("testdata", t.Name(), "zfs_snapshot.err"),
+				zfs.KeyFakeZFSExitCode: strconv.Itoa(tt.zfsExitCode),
+			})
 			fakeZFS = zfs.SwallowFurtherArgs(fakeZFS, &swallowedArgs)
 			adapter := zfs.Adapter(fakeZFS)
 
@@ -204,13 +202,12 @@ func TestAdapter_Destroy(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			var swallowedArgs []string
 
-			env := []string{
-				fmt.Sprintf("%s=1", zfs.KeyIsFakeZFSCmd),
-				fmt.Sprintf("%s=%s", zfs.KeyFakeZFSErrFile, filepath.Join("testdata", t.Name(), "zfs_destroy.err")),
-				fmt.Sprintf("%s=%d", zfs.KeyFakeZFSExitCode, tt.zfsExitCode),
-			}
 			// Shadow the top-level fakeZFS variable!
-			fakeZFS := zfs.WithEnv(fakeZFS, env)
+			fakeZFS := zfs.WithEnv(fakeZFS, map[string]string{
+				zfs.KeyIsFakeZFSCmd:    "1",
+				zfs.KeyFakeZFSErrFile:  filepath.Join("testdata", t.Name(), "zfs_destroy.err"),
+				zfs.KeyFakeZFSExitCode: strconv.Itoa(tt.zfsExitCode),
+			})
 			fakeZFS = zfs.SwallowFurtherArgs(fakeZFS, &swallowedArgs)
 			adapter := zfs.Adapter(fakeZFS)
 

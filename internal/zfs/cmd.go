@@ -1,6 +1,9 @@
 package zfs
 
-import "os/exec"
+import (
+	"fmt"
+	"os/exec"
+)
 
 // CmdFunc is a function that creates an *exec.Cmd.
 //
@@ -32,10 +35,14 @@ func NewCmdFunc(name string, args ...string) CmdFunc {
 // passed environment.
 //
 // env is a slice of strings of the form KEY=VALUE.
-func WithEnv(f CmdFunc, env []string) CmdFunc {
+func WithEnv(f CmdFunc, env map[string]string) CmdFunc {
+	cmdEnv := make([]string, 0, len(env))
+	for k, v := range env {
+		cmdEnv = append(cmdEnv, fmt.Sprintf("%s=%s", k, v))
+	}
 	return func(args ...string) *exec.Cmd {
 		cmd := f(args...)
-		cmd.Env = env
+		cmd.Env = cmdEnv
 		return cmd
 	}
 }
