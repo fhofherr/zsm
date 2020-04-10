@@ -3,6 +3,7 @@ package snapshot_test
 import (
 	"errors"
 	"fmt"
+	"math/rand"
 	"testing"
 
 	"github.com/fhofherr/zsm/internal/snapshot"
@@ -142,6 +143,41 @@ func TestManager_CreateSnapshot(t *testing.T) {
 		assert.NoError(t, err)
 		adapter.AssertExpectations(t)
 	})
+}
+
+func TestManager_CleanSnapshots(t *testing.T) {
+	allSnapshots := []string{
+		"zfs_test@2020-04-10T09:45:58.564585005Z",
+		"zfs_test@2020-04-10T09:44:58.564585005Z",
+		"zfs_test@2020-04-10T09:43:58.564585005Z", // outdated according to cfg
+		"zfs_test@2020-04-10T08:44:58.564585005Z",
+		"zfs_test@2020-04-10T07:44:58.564585005Z", // outdated according to cfg
+
+		"zfs_test/fs_1@2020-04-10T09:45:58.564585005Z",
+		"zfs_test/fs_1@2020-04-10T09:44:58.564585005Z",
+		"zfs_test/fs_1@2020-04-10T09:43:58.564585005Z", // outdated according to cfg
+		"zfs_test/fs_1@2020-04-10T08:44:58.564585005Z",
+		"zfs_test/fs_1@2020-04-10T07:44:58.564585005Z", // outdated according to cfg
+	}
+	// Shuffle allSnapshots to ensure we don't assume anything about the order
+	// in CleanSnapshots.
+	rand.Shuffle(len(allSnapshots), func(i, j int) {
+		allSnapshots[i], allSnapshots[j] = allSnapshots[j], allSnapshots[i]
+	})
+	cfg := snapshot.BucketConfig{snapshot.Minute: 2, snapshot.Hour: 2}
+
+	adapter := &snapshot.MockZFSAdapter{}
+	adapter.Test(t)
+	adapter.On("List", zfs.Snapshot).Return(allSnapshots, nil)
+	adapter.On("Destroy", "zfs_test@2020-04-10T09:43:58.564585005Z").Return(nil)
+	adapter.On("Destroy", "zfs_test@2020-04-10T07:44:58.564585005Z").Return(nil)
+	adapter.On("Destroy", "zfs_test/fs_1@2020-04-10T09:43:58.564585005Z").Return(nil)
+	adapter.On("Destroy", "zfs_test/fs_1@2020-04-10T07:44:58.564585005Z").Return(nil)
+
+	mgr := &snapshot.Manager{ZFS: adapter}
+	err := mgr.CleanSnapshots(cfg)
+	assert.NoError(t, err)
+	adapter.AssertExpectations(t)
 }
 
 func isFileSystemExcluded(excludedFileSystems []string, fs string) bool {

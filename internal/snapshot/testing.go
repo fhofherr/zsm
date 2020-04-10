@@ -25,6 +25,12 @@ func (m *MockZFSAdapter) List(typ zfs.ListType) ([]string, error) {
 	return args.Get(0).([]string), args.Error(1)
 }
 
+// Destroy registers a call to zfs destroy.
+func (m *MockZFSAdapter) Destroy(name string) error {
+	args := m.Called(name)
+	return args.Error(0)
+}
+
 // AssertNameFormat asserts that the passed snapName has the expected format
 // for a snapshot of a filesystem with name fsName.
 func AssertNameFormat(t *testing.T, fsName, snapName string) bool {
@@ -37,4 +43,35 @@ func AssertNameFormat(t *testing.T, fsName, snapName string) bool {
 		ok = false
 	}
 	return ok
+}
+
+// FakeNames creates n fake snapshots Names. Two consecutive names are delta
+// apart. The last snapshot Name is end.
+func FakeNames(t *testing.T, end Name, delta Interval, n int) []Name {
+	names := make([]Name, n)
+	ts := end.Timestamp
+	for i := n - 1; i >= 0; i-- {
+		names[i] = Name{
+			FileSystem: end.FileSystem,
+			Timestamp:  ts,
+		}
+		switch delta {
+		case Minute:
+			ts = ts.Add(-time.Minute)
+		case Hour:
+			ts = ts.Add(-time.Hour)
+		case Day:
+			ts = ts.AddDate(0, 0, -1)
+		case Week:
+			ts = ts.AddDate(0, 0, -7)
+		case Month:
+			ts = ts.AddDate(0, -1, 0)
+		case Year:
+			ts = ts.AddDate(-1, 0, 0)
+		default:
+			t.Fatalf("unsupported interval: %s", delta)
+		}
+	}
+
+	return names
 }

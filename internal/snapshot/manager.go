@@ -14,6 +14,7 @@ import (
 type ZFSAdapter interface {
 	CreateSnapshot(string) error
 	List(zfs.ListType) ([]string, error)
+	Destroy(string) error
 }
 
 // CreateOption modifies the way CreateSnapshot creates a snapshot of one
@@ -113,4 +114,36 @@ func removeExcludedFileSystems(selected []string, excluded map[string]bool) []st
 		remaining = append(remaining, fs)
 	}
 	return remaining
+}
+
+// CleanSnapshots removes all snapshots outdated according to BucketConfig.
+func (m *Manager) CleanSnapshots(cfg BucketConfig) error {
+	snapshots, err := m.ZFS.List(zfs.Snapshot)
+	if err != nil {
+		return fmt.Errorf("clean snapshots: %w", err)
+	}
+
+	names := make(map[string][]Name, len(snapshots))
+	for _, s := range snapshots {
+		name, ok := ParseName(s)
+		if !ok {
+			// snapshot was not created by us
+			continue
+		}
+		names[name.FileSystem] = append(names[name.FileSystem], name)
+	}
+
+	rejects := make([]Name, 0, len(snapshots))
+	for _, ns := range names {
+		_, rjs := clean(cfg, ns)
+		rejects = append(rejects, rjs...)
+	}
+
+	for _, rj := range rejects {
+		if err := m.ZFS.Destroy(rj.String()); err != nil {
+			return fmt.Errorf("clean snapshots: %w", err)
+		}
+	}
+
+	return nil
 }
