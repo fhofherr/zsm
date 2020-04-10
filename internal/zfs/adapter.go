@@ -124,3 +124,28 @@ func (z Adapter) CreateSnapshot(name string) error {
 	}
 	return nil
 }
+
+// Destroy removes the zfs object with name.
+//
+// Destroy merely calls zfs destroy. Provided all conditions for destroying an
+// object are met, the object will be destroyed.
+func (z Adapter) Destroy(name string) error {
+	var stderr bytes.Buffer
+
+	cmd := z("destroy", name)
+	cmd.Stderr = &stderr
+
+	if err := cmd.Run(); err != nil {
+		var exitErr *exec.ExitError
+
+		if errors.As(err, &exitErr) {
+			return &Error{
+				SubCommand: "destroy",
+				ExitCode:   exitErr.ExitCode(),
+				Stderr:     stderr.String(),
+			}
+		}
+		return fmt.Errorf("zfs destroy: %w", err)
+	}
+	return nil
+}

@@ -175,3 +175,53 @@ func TestAdapter_CreateSnapshot(t *testing.T) {
 		})
 	}
 }
+
+func TestAdapter_Destroy(t *testing.T) {
+	tests := []struct {
+		name        string
+		objName     string
+		zfsExitCode int
+		expectedErr error
+	}{
+		{
+			name:    "zfs destroys object",
+			objName: "zsm_test@2020-04-10T09:45:58.564585005Z",
+		},
+		{
+			name:        "zfs fails with exit code",
+			zfsExitCode: 10,
+			expectedErr: &zfs.Error{
+				SubCommand: "destroy",
+				ExitCode:   10,
+				Stderr:     "zfs destroy wrote this to stderr\n",
+			},
+		},
+	}
+
+	fakeZFS := zfs.Fake(t)
+	for _, tt := range tests {
+		tt := tt
+		t.Run(tt.name, func(t *testing.T) {
+			var swallowedArgs []string
+
+			env := []string{
+				fmt.Sprintf("%s=1", zfs.KeyIsFakeZFSCmd),
+				fmt.Sprintf("%s=%s", zfs.KeyFakeZFSErrFile, filepath.Join("testdata", t.Name(), "zfs_destroy.err")),
+				fmt.Sprintf("%s=%d", zfs.KeyFakeZFSExitCode, tt.zfsExitCode),
+			}
+			// Shadow the top-level fakeZFS variable!
+			fakeZFS := zfs.WithEnv(fakeZFS, env)
+			fakeZFS = zfs.SwallowFurtherArgs(fakeZFS, &swallowedArgs)
+			adapter := zfs.Adapter(fakeZFS)
+
+			err := adapter.Destroy(tt.objName)
+			if tt.expectedErr == nil && !assert.NoError(t, err) {
+				return
+			}
+			if !errors.Is(err, tt.expectedErr) {
+				t.Errorf("unexpected error: want: %v; got: %v", tt.expectedErr, err)
+			}
+			assert.Equal(t, []string{"destroy", tt.objName}, swallowedArgs)
+		})
+	}
+}
