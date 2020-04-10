@@ -6,12 +6,9 @@ import (
 	"github.com/fhofherr/zsm/internal/config"
 	"github.com/fhofherr/zsm/internal/snapshot"
 	"github.com/spf13/cobra"
-	"github.com/spf13/viper"
 )
 
-func newCreateCommand(v *viper.Viper, sm *snapshot.Manager) *cobra.Command {
-	var exclude []string
-
+func newCreateCommand(cmdCfg *zsmCommandConfig) *cobra.Command {
 	createCmd := &cobra.Command{
 		Use:   "create [FILE SYSTEM]",
 		Short: "Create snapshots for all ZFS file systems",
@@ -25,23 +22,26 @@ where <TIMESTAMP> is an RFC3339 timestamp. The time zone of the <TIMESTAMP> is a
 of the system time.`,
 		Args: cobra.RangeArgs(0, 1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			var opts []snapshot.CreateOption
+			var createOpts []snapshot.CreateOption
 
+			sm, err := cmdCfg.SMFactory(cmdCfg)
+			if err != nil {
+				return fmt.Errorf("create snapshot manager: %w", err)
+			}
 			if len(args) == 1 {
-				opts = append(opts, snapshot.FromFileSystem(args[0]))
+				createOpts = append(createOpts, snapshot.FromFileSystem(args[0]))
 			}
-			for _, e := range exclude {
-				opts = append(opts, snapshot.ExcludeFileSystem(e))
+			excludes := cmdCfg.V.GetStringSlice(config.FileSystemsExclude)
+			for _, e := range excludes {
+				createOpts = append(createOpts, snapshot.ExcludeFileSystem(e))
 			}
-			if err := sm.CreateSnapshots(opts...); err != nil {
-				return fmt.Errorf("%s: %w", cmd.Name(), err)
-			}
-			return nil
+			return sm.CreateSnapshots(createOpts...)
 		},
 	}
 
-	createCmd.Flags().StringSliceVarP(&exclude, "exclude", "e", nil,
+	createCmd.Flags().StringSliceP("exclude", "e", nil,
 		"File systems to exclude when creating a snapshot.")
-	v.BindPFlag(config.FileSystemsExclude, createCmd.Flags().Lookup("exclude"))
+	cmdCfg.V.BindPFlag(config.FileSystemsExclude, createCmd.Flags().Lookup("exclude"))
+
 	return createCmd
 }

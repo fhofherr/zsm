@@ -7,7 +7,8 @@ import (
 )
 
 func main() {
-	if err := cmd.Execute(); err != nil {
+	zsmCmd := cmd.NewZSMCommand()
+	if err := zsmCmd.Execute(); err != nil {
 		// Cobra takes care of printing the error.
 		os.Exit(1)
 	}

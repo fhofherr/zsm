@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/fhofherr/zsm/internal/zfs"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 )
 
@@ -74,4 +75,25 @@ func FakeNames(t *testing.T, end Name, delta Interval, n int) []Name {
 	}
 
 	return names
+}
+
+// EqualCreateOptions returns a function that checks if the passed CreateOptions
+// match the expected create options.
+//
+// EqualCreateOptions is mainly intended for use with mock.MatchedBy.
+func EqualCreateOptions(t *testing.T, expectedOpts ...CreateOption) func([]CreateOption) bool {
+	expected := createOpts{}
+	for _, opt := range expectedOpts {
+		opt(&expected)
+	}
+
+	return func(actualOpts []CreateOption) bool {
+		actual := createOpts{}
+		for _, opt := range actualOpts {
+			opt(&actual)
+		}
+		// Use assert.Equal instead of cmp.Equal as this fails the test with
+		// additional output if expected and actual don't match.
+		return assert.Equal(t, expected, actual)
+	}
 }

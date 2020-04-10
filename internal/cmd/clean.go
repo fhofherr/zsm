@@ -1,15 +1,72 @@
 package cmd
 
 import (
+	"fmt"
+
 	"github.com/fhofherr/zsm/internal/config"
 	"github.com/fhofherr/zsm/internal/snapshot"
 	"github.com/spf13/cobra"
-	"github.com/spf13/viper"
 )
 
-func newCleanCommand(v *viper.Viper, sm *snapshot.Manager) *cobra.Command {
-	var cfg snapshot.BucketConfig
+var cleanIntervalFlags = []struct {
+	Interval snapshot.Interval
+	Key      string
+	Default  int
+	Short    string
+	Long     string
+	Help     string
+}{
+	{
+		Interval: snapshot.Minute,
+		Key:      config.SnapshotsKeepMinute,
+		Default:  config.DefaultSnapshotsKeepMinute,
+		Short:    "m",
+		Long:     "minute",
+		Help:     "Keep the last m minutely snapshots.",
+	},
+	{
+		Interval: snapshot.Hour,
+		Key:      config.SnapshotsKeepHour,
+		Default:  config.DefaultSnapshotsKeepHour,
+		Short:    "H",
+		Long:     "hour",
+		Help:     "Keep the last H hourly snapshots.",
+	},
+	{
+		Interval: snapshot.Day,
+		Key:      config.SnapshotsKeepDay,
+		Default:  config.DefaultSnapshotsKeepDay,
+		Short:    "d",
+		Long:     "day",
+		Help:     "Keep the last d daily snapshots.",
+	},
+	{
+		Interval: snapshot.Week,
+		Key:      config.SnapshotsKeepWeek,
+		Default:  config.DefaultSnapshotsKeepWeek,
+		Short:    "w",
+		Long:     "week",
+		Help:     "Keep the last w weekly snapshots.",
+	},
+	{
+		Interval: snapshot.Month,
+		Key:      config.SnapshotsKeepMonth,
+		Default:  config.DefaultSnapshotsKeepMonth,
+		Short:    "M",
+		Long:     "month",
+		Help:     "Keep the last M monthly snapshots.",
+	},
+	{
+		Interval: snapshot.Year,
+		Key:      config.SnapshotsKeepYear,
+		Default:  config.DefaultSnapshotsKeepYear,
+		Short:    "y",
+		Long:     "year",
+		Help:     "Keep the last y yearly snapshots.",
+	},
+}
 
+func newCleanCommand(cmdCfg *zsmCommandConfig) *cobra.Command {
 	cleanCmd := &cobra.Command{
 		Use:   "clean",
 		Short: "Clean obsolete zfs snapshots created by zsm",
@@ -27,33 +84,23 @@ last m minutely as well as one of the last H hourly snapshots.
 Snapshots that have not been created by zsm, i.e. snapshots that do not fit zsm's
 naming conventions, are not removed.`,
 		RunE: func(cmd *cobra.Command, args []string) error {
+			sm, err := cmdCfg.SMFactory(cmdCfg)
+			if err != nil {
+				return fmt.Errorf("create snapshot manager: %w", err)
+			}
+
+			var cfg snapshot.BucketConfig
+			for _, iv := range cleanIntervalFlags {
+				cfg[iv.Interval] = cmdCfg.V.GetInt(iv.Key)
+			}
 			return sm.CleanSnapshots(cfg)
 		},
 	}
 
-	cleanCmd.Flags().IntVarP(&cfg[snapshot.Minute], "minute", "m", config.DefaultSnapshotsKeepMinute,
-		"Keep the last m minutely snapshots.")
-	v.BindPFlag(config.SnapshotsKeepMinute, cleanCmd.Flags().Lookup("minute"))
-
-	cleanCmd.Flags().IntVarP(&cfg[snapshot.Hour], "hour", "H", config.DefaultSnapshotsKeepHour,
-		"Keep the last H hourly snapshots.")
-	v.BindPFlag(config.SnapshotsKeepHour, cleanCmd.Flags().Lookup("hour"))
-
-	cleanCmd.Flags().IntVarP(&cfg[snapshot.Day], "day", "d", config.DefaultSnapshotsKeepDay,
-		"Keep the last d daily snapshots.")
-	v.BindPFlag(config.SnapshotsKeepDay, cleanCmd.Flags().Lookup("day"))
-
-	cleanCmd.Flags().IntVarP(&cfg[snapshot.Week], "week", "w", config.DefaultSnapshotsKeepWeek,
-		"Keep the last w weekly snapshots.")
-	v.BindPFlag(config.SnapshotsKeepWeek, cleanCmd.Flags().Lookup("week"))
-
-	cleanCmd.Flags().IntVarP(&cfg[snapshot.Month], "month", "M", config.DefaultSnapshotsKeepMonth,
-		"Keep the last M monthly snapshots.")
-	v.BindPFlag(config.SnapshotsKeepMonth, cleanCmd.Flags().Lookup("month"))
-
-	cleanCmd.Flags().IntVarP(&cfg[snapshot.Year], "year", "y", config.DefaultSnapshotsKeepYear,
-		"Keep the last y yearly snapshots.")
-	v.BindPFlag(config.SnapshotsKeepYear, cleanCmd.Flags().Lookup("year"))
+	for _, iv := range cleanIntervalFlags {
+		cleanCmd.Flags().IntP(iv.Long, iv.Short, iv.Default, iv.Help)
+		cmdCfg.V.BindPFlag(iv.Key, cleanCmd.Flags().Lookup(iv.Long))
+	}
 
 	return cleanCmd
 }

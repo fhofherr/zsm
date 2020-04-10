@@ -1,0 +1,5 @@
+---
+filesystems:
+  exclude:
+    - "zsm_test/fs_3"
+    - "zsm_test/fs_4"
