@@ -12,5 +12,6 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 * `zsm create` command which allows to create snapshots of a single
   specified or all availalbe file systems.
+* `zsm clean` command which allows to remove obsolete snapshots.
 
 [Unreleased]: https://github.com/fhofherr/zsm

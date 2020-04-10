@@ -55,6 +55,7 @@ func Execute() error {
 
 	rootCmd := newRootCmd(v, sm)
 	rootCmd.AddCommand(newCreateCommand(v, sm))
+	rootCmd.AddCommand(newCleanCommand(v, sm))
 
 	return rootCmd.Execute()
 }

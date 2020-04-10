@@ -2,14 +2,30 @@ package config
 
 import "github.com/spf13/viper"
 
+// ZSM setting keys and default values.
 const (
-	// ZFSCmd setting
-	ZFSCmd = "zfs.cmd"
-	// DefaultZFSCmd is the default value for ZFSCmd
+	ZFSCmd        = "zfs.cmd"
 	DefaultZFSCmd = "/sbin/zfs"
 
-	// FileSystemsExclude setting
 	FileSystemsExclude = "filesystems.exclude"
+
+	SnapshotsKeepMinute        = "snapshots.keep.minute"
+	DefaultSnapshotsKeepMinute = 60
+
+	SnapshotsKeepHour        = "snapshots.keep.hour"
+	DefaultSnapshotsKeepHour = 24
+
+	SnapshotsKeepDay        = "snapshots.keep.day"
+	DefaultSnapshotsKeepDay = 7
+
+	SnapshotsKeepWeek        = "snapshots.keep.week"
+	DefaultSnapshotsKeepWeek = 4
+
+	SnapshotsKeepMonth        = "snapshots.keep.month"
+	DefaultSnapshotsKeepMonth = 12
+
+	SnapshotsKeepYear        = "snapshots.keep.year"
+	DefaultSnapshotsKeepYear = 5
 )
 
 func setDefaults(v *viper.Viper) {
