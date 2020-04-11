@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"bytes"
+	"io"
 	"os"
 	"path/filepath"
 	"testing"
@@ -20,8 +21,7 @@ type TestCase struct {
 	AssertOutput func(t *testing.T, stdout, stderr string)
 }
 
-// Run runs the test case.
-func (tt *TestCase) Run(t *testing.T) {
+func (tt *TestCase) run(t *testing.T) {
 	var (
 		stdout bytes.Buffer
 		stderr bytes.Buffer
@@ -63,7 +63,7 @@ func (tt *TestCase) Run(t *testing.T) {
 func RunTests(t *testing.T, tests []TestCase) {
 	t.Helper()
 	for _, tt := range tests {
-		t.Run(tt.Name, tt.Run)
+		t.Run(tt.Name, tt.run)
 	}
 }
 
@@ -112,4 +112,10 @@ func (m *MockSnapshotManager) CleanSnapshots(cfg snapshot.BucketConfig) error {
 func (m *MockSnapshotManager) ListSnapshots() ([]snapshot.Name, error) {
 	args := m.Called()
 	return args.Get(0).([]snapshot.Name), args.Error(1)
+}
+
+// ReceiveSnapshot mocks the ReceiveSnapshot method.
+func (m *MockSnapshotManager) ReceiveSnapshot(targetFS string, name snapshot.Name, r io.Reader) error {
+	args := m.Called(targetFS, name, r)
+	return args.Error(0)
 }

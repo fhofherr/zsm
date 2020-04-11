@@ -3,6 +3,7 @@ package snapshot
 import (
 	"errors"
 	"fmt"
+	"io"
 	"strings"
 	"time"
 
@@ -15,6 +16,7 @@ type ZFSAdapter interface {
 	CreateSnapshot(string) error
 	List(zfs.ListType) ([]string, error)
 	Destroy(string) error
+	Receive(string, io.Reader) error
 }
 
 // CreateOption modifies the way CreateSnapshot creates a snapshot of one
@@ -166,6 +168,46 @@ func (m *Manager) listSnapshots(collect func(Name)) error {
 			continue
 		}
 		collect(name)
+	}
+	return nil
+}
+
+// ReceiveSnapshot receives a snapshot with the passed name.
+//
+// It writes the data read from r to the snapshot.  ReceiveSnapshot returns an
+// error if name.FileSystem does not exist, or if a snapshot with the same name
+// already exists.
+func (m *Manager) ReceiveSnapshot(targetFS string, name Name, r io.Reader) error {
+	allFileSystems, err := m.ZFS.List(zfs.FileSystem)
+	if err != nil {
+		return fmt.Errorf("receive snapshot: %w", err)
+	}
+	fsExists := false
+	for _, fs := range allFileSystems {
+		if fs == targetFS {
+			fsExists = true
+			break
+		}
+	}
+	if !fsExists {
+		return fmt.Errorf("receive snapshot: missing file system: %s", targetFS)
+	}
+
+	snExists := false
+	err = m.listSnapshots(func(n Name) {
+		if name == n {
+			snExists = true
+		}
+	})
+	if err != nil {
+		return fmt.Errorf("receive snapshot: %w", err)
+	}
+	if snExists {
+		return fmt.Errorf("receive snapshot: exists: %s", name)
+	}
+
+	if err := m.ZFS.Receive(name.String(), r); err != nil {
+		return fmt.Errorf("receive snapshot: %w", err)
 	}
 	return nil
 }

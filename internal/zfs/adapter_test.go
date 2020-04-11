@@ -1,10 +1,11 @@
 package zfs_test
 
 import (
+	"bytes"
 	"errors"
 	"fmt"
+	"io/ioutil"
 	"path/filepath"
-	"strconv"
 	"testing"
 
 	"github.com/fhofherr/zsm/internal/zfs"
@@ -51,174 +52,152 @@ func TestAdapter_New(t *testing.T) {
 }
 
 func TestAdapter_List(t *testing.T) {
-	tests := []struct {
-		name        string
-		typ         zfs.ListType
-		zfsExitCode int
-		expected    []string
-		expectedErr error
-	}{
+	tests := []zfs.TestCase{
 		{
-			name:     "list all file systems",
-			typ:      zfs.FileSystem,
-			expected: []string{"zsm_test", "zsm_test/fs_1", "zsm_test/fs_2", "zsm_test/fs_2/nested_fs_1"},
-		},
-		{
-			name: "list all snapshots",
-			typ:  zfs.Snapshot,
-			expected: []string{
-				"zsm_test@2020-04-05T09:04:24.01925437Z",
-				"zsm_test/fs_1@2020-04-05T09:04:24.01925437Z",
+			Name: "list all file systems",
+			Call: func(t *testing.T, a zfs.Adapter) error {
+				fileSystems, err := a.List(zfs.FileSystem)
+				if err != nil {
+					return err
+				}
+				expected := []string{"zsm_test", "zsm_test/fs_1", "zsm_test/fs_2", "zsm_test/fs_2/nested_fs_1"}
+				assert.Equal(t, expected, fileSystems)
+				return nil
+			},
+			ZFSArgs: []string{"list", "-H", "-t", "filesystem", "-o", "name"},
+			Stdout: func(t *testing.T) []byte {
+				file := filepath.Join("testdata", t.Name(), "zfs_list.out")
+				bs, err := ioutil.ReadFile(file)
+				if err != nil {
+					t.Fatal(err)
+				}
+				return bs
 			},
 		},
 		{
-			name:        "list fails with exit code",
-			typ:         zfs.FileSystem,
-			zfsExitCode: 10,
-			expectedErr: &zfs.Error{
-				SubCommand: "list",
-				ExitCode:   10,
-				Stderr:     "zfs list wrote this to stderr\n",
+			Name: "list all snapshots",
+			Call: func(t *testing.T, a zfs.Adapter) error {
+				snapshots, err := a.List(zfs.Snapshot)
+				if err != nil {
+					return err
+				}
+				expected := []string{
+					"zsm_test@2020-04-05T09:04:24.01925437Z",
+					"zsm_test/fs_1@2020-04-05T09:04:24.01925437Z",
+				}
+				assert.Equal(t, expected, snapshots)
+				return nil
+			},
+			ZFSArgs: []string{"list", "-H", "-t", "snapshot", "-o", "name"},
+			Stdout: func(t *testing.T) []byte {
+				file := filepath.Join("testdata", t.Name(), "zfs_list.out")
+				bs, err := ioutil.ReadFile(file)
+				if err != nil {
+					t.Fatal(err)
+				}
+				return bs
 			},
 		},
 		{
-			name:        "list returns no output",
-			typ:         zfs.FileSystem,
-			expectedErr: zfs.ErrNoOutput,
+			Name: "list returns no output",
+			Call: func(t *testing.T, a zfs.Adapter) error {
+				res, err := a.List(zfs.FileSystem)
+				if !errors.Is(err, zfs.ErrNoOutput) {
+					return err
+				}
+				assert.Empty(t, res)
+				return nil
+			},
+			ZFSArgs: []string{"list", "-H", "-t", "filesystem", "-o", "name"},
+		},
+		{
+			Name: "list fails",
+			Call: func(t *testing.T, a zfs.Adapter) error {
+				_, err := a.List(zfs.Snapshot)
+				return err
+			},
+			ZFSArgs: []string{"list", "-H", "-t", "snapshot", "-o", "name"},
+			Stderr: func(t *testing.T) []byte {
+				return []byte("zfs list wrote this to stderr")
+			},
+			ZFSExitCode: 10,
 		},
 	}
-
-	fakeZFS := zfs.Fake(t)
-	for _, tt := range tests {
-		tt := tt
-		t.Run(tt.name, func(t *testing.T) {
-			var swallowedArgs []string
-
-			// Shadow the top-level fakeZFS variable!
-			fakeZFS := zfs.WithEnv(fakeZFS, map[string]string{
-				zfs.KeyIsFakeZFSCmd:    "1",
-				zfs.KeyFakeZFSOutFile:  filepath.Join("testdata", t.Name(), "zfs_list.out"),
-				zfs.KeyFakeZFSErrFile:  filepath.Join("testdata", t.Name(), "zfs_list.err"),
-				zfs.KeyFakeZFSExitCode: strconv.Itoa(tt.zfsExitCode),
-			})
-			fakeZFS = zfs.SwallowFurtherArgs(fakeZFS, &swallowedArgs)
-			adapter := zfs.Adapter(fakeZFS)
-
-			actual, err := adapter.List(tt.typ)
-			if tt.expectedErr == nil && !assert.NoError(t, err) {
-				return
-			}
-			if !errors.Is(err, tt.expectedErr) {
-				t.Errorf("unexpected error: want: %v; got: %v", tt.expectedErr, err)
-			}
-			assert.Equal(t, tt.expected, actual)
-			assert.Equal(t, []string{"list", "-H", "-t", string(tt.typ), "-o", "name"}, swallowedArgs)
-		})
-	}
+	zfs.RunTests(t, tests, true)
 }
 
 func TestAdapter_CreateSnapshot(t *testing.T) {
-	tests := []struct {
-		name            string
-		snapshotName    string
-		zfsExitCode     int
-		expectedZFSArgs []string
-		expectedErr     error
-	}{
+	tests := []zfs.TestCase{
 		{
-			name:         "create snapshot",
-			snapshotName: "zsm_test/fs_1@snapshot_name",
-			expectedZFSArgs: []string{
-				"snapshot", "zsm_test/fs_1@snapshot_name",
+			Name: "create snapshot",
+			Call: func(t *testing.T, a zfs.Adapter) error {
+				return a.CreateSnapshot("zsm_test/fs_1@snapshot_name")
 			},
+			ZFSArgs: []string{"snapshot", "zsm_test/fs_1@snapshot_name"},
 		},
 		{
-			name:         "snapshot fails with exit code",
-			snapshotName: "zsm_test/fs_1@snapshot_name",
-			expectedZFSArgs: []string{
-				"snapshot", "zsm_test/fs_1@snapshot_name",
+			Name: "snapshot fails with exit code",
+			Call: func(t *testing.T, a zfs.Adapter) error {
+				return a.CreateSnapshot("zsm_test/fs_1@snapshot_name")
 			},
-			zfsExitCode: 10,
-			expectedErr: &zfs.Error{
-				SubCommand: "snapshot",
-				ExitCode:   10,
-				Stderr:     "zfs snapshot wrote this to stderr\n",
+			ZFSArgs:     []string{"snapshot", "zsm_test/fs_1@snapshot_name"},
+			ZFSExitCode: 10,
+			Stderr: func(t *testing.T) []byte {
+				return []byte("zfs snapshot wrote this to stderr")
 			},
 		},
 	}
-
-	fakeZFS := zfs.Fake(t)
-	for _, tt := range tests {
-		tt := tt
-		t.Run(tt.name, func(t *testing.T) {
-			var swallowedArgs []string
-
-			// Shadow the top-level fakeZFS variable!
-			fakeZFS := zfs.WithEnv(fakeZFS, map[string]string{
-				zfs.KeyIsFakeZFSCmd:    "1",
-				zfs.KeyFakeZFSErrFile:  filepath.Join("testdata", t.Name(), "zfs_snapshot.err"),
-				zfs.KeyFakeZFSExitCode: strconv.Itoa(tt.zfsExitCode),
-			})
-			fakeZFS = zfs.SwallowFurtherArgs(fakeZFS, &swallowedArgs)
-			adapter := zfs.Adapter(fakeZFS)
-
-			err := adapter.CreateSnapshot(tt.snapshotName)
-			if tt.expectedErr == nil && !assert.NoError(t, err) {
-				return
-			}
-			if !errors.Is(err, tt.expectedErr) {
-				t.Errorf("unexpected error: want: %v; got: %v", tt.expectedErr, err)
-			}
-			assert.Equal(t, []string{"snapshot", tt.snapshotName}, swallowedArgs)
-		})
-	}
+	zfs.RunTests(t, tests, true)
 }
 
 func TestAdapter_Destroy(t *testing.T) {
-	tests := []struct {
-		name        string
-		objName     string
-		zfsExitCode int
-		expectedErr error
-	}{
+	tests := []zfs.TestCase{
 		{
-			name:    "zfs destroys object",
-			objName: "zsm_test@2020-04-10T09:45:58.564585005Z",
+			Name: "zfs destroys object",
+			Call: func(t *testing.T, a zfs.Adapter) error {
+				return a.Destroy("zsm_test@2020-04-10T09:45:58.564585005Z")
+			},
+			ZFSArgs: []string{"destroy", "zsm_test@2020-04-10T09:45:58.564585005Z"},
 		},
 		{
-			name:        "zfs fails with exit code",
-			zfsExitCode: 10,
-			expectedErr: &zfs.Error{
-				SubCommand: "destroy",
-				ExitCode:   10,
-				Stderr:     "zfs destroy wrote this to stderr\n",
+			Name: "zfs fails with exit code",
+			Call: func(t *testing.T, a zfs.Adapter) error {
+				return a.Destroy("zsm_test@2020-04-10T09:45:58.564585005Z")
+			},
+			ZFSArgs:     []string{"destroy", "zsm_test@2020-04-10T09:45:58.564585005Z"},
+			ZFSExitCode: 10,
+			Stderr: func(t *testing.T) []byte {
+				return []byte("zfs destroy wrote this to stderr")
 			},
 		},
 	}
+	zfs.RunTests(t, tests, true)
+}
 
-	fakeZFS := zfs.Fake(t)
-	for _, tt := range tests {
-		tt := tt
-		t.Run(tt.name, func(t *testing.T) {
-			var swallowedArgs []string
-
-			// Shadow the top-level fakeZFS variable!
-			fakeZFS := zfs.WithEnv(fakeZFS, map[string]string{
-				zfs.KeyIsFakeZFSCmd:    "1",
-				zfs.KeyFakeZFSErrFile:  filepath.Join("testdata", t.Name(), "zfs_destroy.err"),
-				zfs.KeyFakeZFSExitCode: strconv.Itoa(tt.zfsExitCode),
-			})
-			fakeZFS = zfs.SwallowFurtherArgs(fakeZFS, &swallowedArgs)
-			adapter := zfs.Adapter(fakeZFS)
-
-			err := adapter.Destroy(tt.objName)
-			if tt.expectedErr == nil && !assert.NoError(t, err) {
-				return
-			}
-			if !errors.Is(err, tt.expectedErr) {
-				t.Errorf("unexpected error: want: %v; got: %v", tt.expectedErr, err)
-			}
-			assert.Equal(t, []string{"destroy", tt.objName}, swallowedArgs)
-		})
+func TestAdapter_Receive(t *testing.T) {
+	tests := []zfs.TestCase{
+		{
+			Name: "pass stdin to zfs receive",
+			Call: func(t *testing.T, a zfs.Adapter) error {
+				stdin := bytes.NewBuffer([]byte("the caller sent this to zfs"))
+				return a.Receive("some-zfs-object", stdin)
+			},
+			ZFSArgs: []string{"receive", "some-zfs-object"},
+			Stdin: func(t *testing.T) []byte {
+				return []byte("the caller sent this to zfs")
+			},
+		},
+		{
+			Name: "zfs receive fails",
+			Call: func(t *testing.T, a zfs.Adapter) error {
+				return a.Receive("some-zfs-object", nil)
+			},
+			ZFSArgs:     []string{"receive", "some-zfs-object"},
+			ZFSExitCode: 10,
+			Stderr: func(t *testing.T) []byte {
+				return []byte("zfs receive wrote this to stderr")
+			},
+		},
 	}
+	zfs.RunTests(t, tests, true)
 }

@@ -17,6 +17,7 @@ type SnapshotManager interface {
 	CreateSnapshots(...snapshot.CreateOption) error
 	CleanSnapshots(snapshot.BucketConfig) error
 	ListSnapshots() ([]snapshot.Name, error)
+	ReceiveSnapshot(string, snapshot.Name, io.Reader) error
 }
 
 // SnapshotManagerFactory creates a SnapshotManager from SnapshotManagerConfig.
@@ -110,6 +111,7 @@ func NewZSMCommand(opts ...ZSMCommandOption) *cobra.Command {
 	rootCmd.AddCommand(newCreateCommand(cmdCfg))
 	rootCmd.AddCommand(newCleanCommand(cmdCfg))
 	rootCmd.AddCommand(newListCommand(cmdCfg))
+	rootCmd.AddCommand(newReceiveCommand(cmdCfg))
 
 	return rootCmd
 }

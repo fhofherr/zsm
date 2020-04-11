@@ -14,5 +14,8 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   specified or all availalbe file systems.
 * `zsm clean` command which allows to remove obsolete snapshots.
 * `zsm list` command which allows to list all snapshots managed by zsm.
+* `zsm receive` command which allows to read snapshot data from `stdin`
+  and store it in a `target_fs`. Care must be taken that `target_fs` is
+  excluded when calling `zsm create`.
 
 [Unreleased]: https://github.com/fhofherr/zsm

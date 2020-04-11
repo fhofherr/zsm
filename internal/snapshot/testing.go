@@ -1,6 +1,7 @@
 package snapshot
 
 import (
+	"io"
 	"testing"
 	"time"
 
@@ -29,6 +30,12 @@ func (m *MockZFSAdapter) List(typ zfs.ListType) ([]string, error) {
 // Destroy registers a call to zfs destroy.
 func (m *MockZFSAdapter) Destroy(name string) error {
 	args := m.Called(name)
+	return args.Error(0)
+}
+
+// Receive registers a call to zfs receive.
+func (m *MockZFSAdapter) Receive(name string, r io.Reader) error {
+	args := m.Called(name, r)
 	return args.Error(0)
 }
 

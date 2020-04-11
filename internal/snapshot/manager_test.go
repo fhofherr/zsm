@@ -1,10 +1,12 @@
 package snapshot_test
 
 import (
+	"bytes"
 	"errors"
 	"fmt"
 	"math/rand"
 	"testing"
+	"time"
 
 	"github.com/fhofherr/zsm/internal/snapshot"
 	"github.com/fhofherr/zsm/internal/zfs"
@@ -145,6 +147,15 @@ func TestManager_CreateSnapshots(t *testing.T) {
 	})
 }
 
+func isFileSystemExcluded(excludedFileSystems []string, fs string) bool {
+	for _, efs := range excludedFileSystems {
+		if fs == efs {
+			return true
+		}
+	}
+	return false
+}
+
 func TestManager_ListSnapshots(t *testing.T) {
 	tests := []struct {
 		name          string
@@ -154,23 +165,23 @@ func TestManager_ListSnapshots(t *testing.T) {
 		{
 			name: "list all snapshots",
 			allSnapshots: []string{
-				"zfs_test@2020-04-10T09:45:58.564585005Z",
-				"zfs_test@2020-04-10T09:44:58.564585005Z",
+				"zsm_test@2020-04-10T09:45:58.564585005Z",
+				"zsm_test@2020-04-10T09:44:58.564585005Z",
 			},
 			expectedNames: []snapshot.Name{
-				snapshot.MustParseName(t, "zfs_test@2020-04-10T09:45:58.564585005Z"),
-				snapshot.MustParseName(t, "zfs_test@2020-04-10T09:44:58.564585005Z"),
+				snapshot.MustParseName(t, "zsm_test@2020-04-10T09:45:58.564585005Z"),
+				snapshot.MustParseName(t, "zsm_test@2020-04-10T09:44:58.564585005Z"),
 			},
 		},
 		{
 			name: "filter snapshots created by someone else",
 			allSnapshots: []string{
-				"zfs_test@2020-04-10T09:45:58.564585005Z",
-				"zfs_test@monday",
-				"zfs_test@important",
+				"zsm_test@2020-04-10T09:45:58.564585005Z",
+				"zsm_test@monday",
+				"zsm_test@important",
 			},
 			expectedNames: []snapshot.Name{
-				snapshot.MustParseName(t, "zfs_test@2020-04-10T09:45:58.564585005Z"),
+				snapshot.MustParseName(t, "zsm_test@2020-04-10T09:45:58.564585005Z"),
 			},
 		},
 	}
@@ -193,17 +204,17 @@ func TestManager_ListSnapshots(t *testing.T) {
 
 func TestManager_CleanSnapshots(t *testing.T) {
 	allSnapshots := []string{
-		"zfs_test@2020-04-10T09:45:58.564585005Z",
-		"zfs_test@2020-04-10T09:44:58.564585005Z",
-		"zfs_test@2020-04-10T09:43:58.564585005Z", // outdated according to cfg
-		"zfs_test@2020-04-10T08:44:58.564585005Z",
-		"zfs_test@2020-04-10T07:44:58.564585005Z", // outdated according to cfg
+		"zsm_test@2020-04-10T09:45:58.564585005Z",
+		"zsm_test@2020-04-10T09:44:58.564585005Z",
+		"zsm_test@2020-04-10T09:43:58.564585005Z", // outdated according to cfg
+		"zsm_test@2020-04-10T08:44:58.564585005Z",
+		"zsm_test@2020-04-10T07:44:58.564585005Z", // outdated according to cfg
 
-		"zfs_test/fs_1@2020-04-10T09:45:58.564585005Z",
-		"zfs_test/fs_1@2020-04-10T09:44:58.564585005Z",
-		"zfs_test/fs_1@2020-04-10T09:43:58.564585005Z", // outdated according to cfg
-		"zfs_test/fs_1@2020-04-10T08:44:58.564585005Z",
-		"zfs_test/fs_1@2020-04-10T07:44:58.564585005Z", // outdated according to cfg
+		"zsm_test/fs_1@2020-04-10T09:45:58.564585005Z",
+		"zsm_test/fs_1@2020-04-10T09:44:58.564585005Z",
+		"zsm_test/fs_1@2020-04-10T09:43:58.564585005Z", // outdated according to cfg
+		"zsm_test/fs_1@2020-04-10T08:44:58.564585005Z",
+		"zsm_test/fs_1@2020-04-10T07:44:58.564585005Z", // outdated according to cfg
 	}
 	// Shuffle allSnapshots to ensure we don't assume anything about the order
 	// in CleanSnapshots.
@@ -215,10 +226,10 @@ func TestManager_CleanSnapshots(t *testing.T) {
 	adapter := &snapshot.MockZFSAdapter{}
 	adapter.Test(t)
 	adapter.On("List", zfs.Snapshot).Return(allSnapshots, nil)
-	adapter.On("Destroy", "zfs_test@2020-04-10T09:43:58.564585005Z").Return(nil)
-	adapter.On("Destroy", "zfs_test@2020-04-10T07:44:58.564585005Z").Return(nil)
-	adapter.On("Destroy", "zfs_test/fs_1@2020-04-10T09:43:58.564585005Z").Return(nil)
-	adapter.On("Destroy", "zfs_test/fs_1@2020-04-10T07:44:58.564585005Z").Return(nil)
+	adapter.On("Destroy", "zsm_test@2020-04-10T09:43:58.564585005Z").Return(nil)
+	adapter.On("Destroy", "zsm_test@2020-04-10T07:44:58.564585005Z").Return(nil)
+	adapter.On("Destroy", "zsm_test/fs_1@2020-04-10T09:43:58.564585005Z").Return(nil)
+	adapter.On("Destroy", "zsm_test/fs_1@2020-04-10T07:44:58.564585005Z").Return(nil)
 
 	mgr := &snapshot.Manager{ZFS: adapter}
 	err := mgr.CleanSnapshots(cfg)
@@ -226,11 +237,69 @@ func TestManager_CleanSnapshots(t *testing.T) {
 	adapter.AssertExpectations(t)
 }
 
-func isFileSystemExcluded(excludedFileSystems []string, fs string) bool {
-	for _, efs := range excludedFileSystems {
-		if fs == efs {
-			return true
+func TestManager_ReceiveSnapshot(t *testing.T) {
+	var (
+		in           bytes.Buffer
+		allSnapshots []string
+
+		fileSystems = []string{"target_fs"}
+		name        = snapshot.Name{
+			FileSystem: "zsm_test",
+			Timestamp:  time.Now().UTC(),
 		}
+	)
+
+	adapter := &snapshot.MockZFSAdapter{}
+	adapter.Test(t)
+	adapter.On("List", zfs.FileSystem).Return(fileSystems, nil)
+	adapter.On("List", zfs.Snapshot).Return(allSnapshots, nil)
+	adapter.On("Receive", name.String(), &in).Return(nil)
+
+	sm := &snapshot.Manager{ZFS: adapter}
+	err := sm.ReceiveSnapshot(fileSystems[0], name, &in)
+	assert.NoError(t, err)
+	adapter.AssertExpectations(t)
+}
+
+func TestManager_ReceiveSnapshot_Errors(t *testing.T) {
+	tests := []struct {
+		name         string
+		targetFS     string
+		snapshot     snapshot.Name
+		fileSystems  []string
+		allSnapshots []string
+		expectedErr  error
+	}{
+		{
+			name:        "error on missing file system",
+			targetFS:    "missing_target_fs",
+			snapshot:    snapshot.MustParseName(t, "zsm_test@2020-04-10T09:45:58.564585005Z"),
+			expectedErr: fmt.Errorf("receive snapshot: missing file system: missing_target_fs"),
+		},
+		{
+			name:         "error on existing snapshot",
+			targetFS:     "target_fs",
+			snapshot:     snapshot.MustParseName(t, "zsm_test@2020-04-10T09:45:58.564585005Z"),
+			fileSystems:  []string{"target_fs"},
+			allSnapshots: []string{"zsm_test@2020-04-10T09:45:58.564585005Z"},
+			expectedErr:  fmt.Errorf("receive snapshot: exists: zsm_test@2020-04-10T09:45:58.564585005Z"),
+		},
 	}
-	return false
+
+	for _, tt := range tests {
+		tt := tt
+		t.Run(tt.name, func(t *testing.T) {
+			adapter := &snapshot.MockZFSAdapter{}
+			adapter.Test(t)
+			adapter.On("List", zfs.FileSystem).Return(tt.fileSystems, nil)
+			adapter.On("List", zfs.Snapshot).Return(tt.allSnapshots, nil)
+
+			mgr := &snapshot.Manager{ZFS: adapter}
+			err := mgr.ReceiveSnapshot(tt.targetFS, tt.snapshot, nil)
+			if tt.expectedErr == nil && !assert.NoError(t, err) {
+				return
+			}
+			assert.EqualError(t, err, tt.expectedErr.Error())
+		})
+	}
 }

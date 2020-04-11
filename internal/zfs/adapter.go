@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
+	"io"
 	"os"
 	"os/exec"
 	"strings"
@@ -146,6 +147,29 @@ func (z Adapter) Destroy(name string) error {
 			}
 		}
 		return fmt.Errorf("zfs destroy: %w", err)
+	}
+	return nil
+}
+
+// Receive receives a named zfs object from r.
+func (z Adapter) Receive(name string, r io.Reader) error {
+	var stderr bytes.Buffer
+
+	cmd := z("receive", name)
+	cmd.Stderr = &stderr
+	cmd.Stdin = r
+
+	if err := cmd.Run(); err != nil {
+		var exitErr *exec.ExitError
+
+		if errors.As(err, &exitErr) {
+			return &Error{
+				SubCommand: "receive",
+				ExitCode:   exitErr.ExitCode(),
+				Stderr:     stderr.String(),
+			}
+		}
+		return fmt.Errorf("zfs receive: %w", err)
 	}
 	return nil
 }
