@@ -15,7 +15,7 @@ func TestClean(t *testing.T) {
 			MakeArgs: func(_ *testing.T) []string {
 				return []string{"clean"}
 			},
-			MakeSMMock: func(t *testing.T) *cmd.MockSnapshotManager {
+			MakeMSM: func(t *testing.T) *cmd.MockSnapshotManager {
 				cfg := snapshot.BucketConfig{
 					snapshot.Minute: config.DefaultSnapshotsKeepMinute,
 					snapshot.Hour:   config.DefaultSnapshotsKeepHour,
@@ -36,7 +36,7 @@ func TestClean(t *testing.T) {
 			MakeArgs: func(t *testing.T) []string {
 				return []string{"clean", "-m", "6", "-H", "5", "-d", "4", "-w", "3", "-M", "2", "-y", "1"}
 			},
-			MakeSMMock: func(t *testing.T) *cmd.MockSnapshotManager {
+			MakeMSM: func(t *testing.T) *cmd.MockSnapshotManager {
 				cfg := snapshot.BucketConfig{
 					snapshot.Minute: 6,
 					snapshot.Hour:   5,
@@ -58,7 +58,7 @@ func TestClean(t *testing.T) {
 				cfgFile := cmd.ConfigFile(t, "config.yaml")
 				return []string{"--config-file", cfgFile, "clean"}
 			},
-			MakeSMMock: func(t *testing.T) *cmd.MockSnapshotManager {
+			MakeMSM: func(t *testing.T) *cmd.MockSnapshotManager {
 				cfg := snapshot.BucketConfig{
 					snapshot.Minute: 1,
 					snapshot.Hour:   2,

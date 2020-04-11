@@ -1,8 +1,6 @@
 package cmd
 
 import (
-	"fmt"
-
 	"github.com/fhofherr/zsm/internal/config"
 	"github.com/fhofherr/zsm/internal/snapshot"
 	"github.com/spf13/cobra"
@@ -84,9 +82,9 @@ last m minutely as well as one of the last H hourly snapshots.
 Snapshots that have not been created by zsm, i.e. snapshots that do not fit zsm's
 naming conventions, are not removed.`,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			sm, err := cmdCfg.SMFactory(cmdCfg)
+			sm, err := cmdCfg.SnapshotManager()
 			if err != nil {
-				return fmt.Errorf("create snapshot manager: %w", err)
+				return err
 			}
 
 			var cfg snapshot.BucketConfig

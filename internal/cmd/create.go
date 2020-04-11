@@ -1,8 +1,6 @@
 package cmd
 
 import (
-	"fmt"
-
 	"github.com/fhofherr/zsm/internal/config"
 	"github.com/fhofherr/zsm/internal/snapshot"
 	"github.com/spf13/cobra"
@@ -24,9 +22,9 @@ of the system time.`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			var createOpts []snapshot.CreateOption
 
-			sm, err := cmdCfg.SMFactory(cmdCfg)
+			sm, err := cmdCfg.SnapshotManager()
 			if err != nil {
-				return fmt.Errorf("create snapshot manager: %w", err)
+				return err
 			}
 			if len(args) == 1 {
 				createOpts = append(createOpts, snapshot.FromFileSystem(args[0]))

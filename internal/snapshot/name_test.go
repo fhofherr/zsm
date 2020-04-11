@@ -50,6 +50,19 @@ func TestParseName(t *testing.T) {
 	}
 }
 
+func TestParseNameJSON(t *testing.T) {
+	name := snapshot.Name{FileSystem: "zsm_test", Timestamp: time.Now().UTC()}
+	nameJSON, err := name.ToJSON()
+	if !assert.NoError(t, err) {
+		return
+	}
+	parsed, err := snapshot.ParseNameJSON(nameJSON)
+	if !assert.NoError(t, err) {
+		return
+	}
+	assert.Equal(t, name, parsed)
+}
+
 func TestName_String(t *testing.T) {
 	nowUTC := time.Now().UTC()
 	fs := "zsm_test/fs_1"

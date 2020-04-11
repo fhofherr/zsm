@@ -15,7 +15,7 @@ func TestCreate(t *testing.T) {
 			MakeArgs: func(t *testing.T) []string {
 				return []string{"create"}
 			},
-			MakeSMMock: func(t *testing.T) *cmd.MockSnapshotManager {
+			MakeMSM: func(t *testing.T) *cmd.MockSnapshotManager {
 				sm := &cmd.MockSnapshotManager{}
 				sm.On("CreateSnapshots").Return(nil)
 				return sm
@@ -26,7 +26,7 @@ func TestCreate(t *testing.T) {
 			MakeArgs: func(t *testing.T) []string {
 				return []string{"create", "zsm_test/fs_1"}
 			},
-			MakeSMMock: func(t *testing.T) *cmd.MockSnapshotManager {
+			MakeMSM: func(t *testing.T) *cmd.MockSnapshotManager {
 				sm := &cmd.MockSnapshotManager{}
 				sm.On("CreateSnapshots", mock.MatchedBy(snapshot.EqualCreateOptions(t,
 					snapshot.FromFileSystem("zsm_test/fs_1")),
@@ -39,7 +39,7 @@ func TestCreate(t *testing.T) {
 			MakeArgs: func(t *testing.T) []string {
 				return []string{"create", "-e", "zsm_test/fs_1", "--exclude", "zsm_test/fs_2"}
 			},
-			MakeSMMock: func(t *testing.T) *cmd.MockSnapshotManager {
+			MakeMSM: func(t *testing.T) *cmd.MockSnapshotManager {
 				sm := &cmd.MockSnapshotManager{}
 				sm.On("CreateSnapshots", mock.MatchedBy(snapshot.EqualCreateOptions(t,
 					snapshot.ExcludeFileSystem("zsm_test/fs_1"),
@@ -54,7 +54,7 @@ func TestCreate(t *testing.T) {
 				cfgFile := cmd.ConfigFile(t, "config.yaml")
 				return []string{"--config-file", cfgFile, "create"}
 			},
-			MakeSMMock: func(t *testing.T) *cmd.MockSnapshotManager {
+			MakeMSM: func(t *testing.T) *cmd.MockSnapshotManager {
 				sm := &cmd.MockSnapshotManager{}
 				sm.On("CreateSnapshots", mock.MatchedBy(snapshot.EqualCreateOptions(t,
 					snapshot.ExcludeFileSystem("zsm_test/fs_3"),

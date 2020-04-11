@@ -118,22 +118,17 @@ func removeExcludedFileSystems(selected []string, excluded map[string]bool) []st
 
 // CleanSnapshots removes all snapshots outdated according to BucketConfig.
 func (m *Manager) CleanSnapshots(cfg BucketConfig) error {
-	snapshots, err := m.ZFS.List(zfs.Snapshot)
+	nSnapshots := 0
+	names := make(map[string][]Name)
+	err := m.listSnapshots(func(name Name) {
+		names[name.FileSystem] = append(names[name.FileSystem], name)
+		nSnapshots++
+	})
 	if err != nil {
 		return fmt.Errorf("clean snapshots: %w", err)
 	}
 
-	names := make(map[string][]Name, len(snapshots))
-	for _, s := range snapshots {
-		name, ok := ParseName(s)
-		if !ok {
-			// snapshot was not created by us
-			continue
-		}
-		names[name.FileSystem] = append(names[name.FileSystem], name)
-	}
-
-	rejects := make([]Name, 0, len(snapshots))
+	rejects := make([]Name, 0, nSnapshots)
 	for _, ns := range names {
 		_, rjs := clean(cfg, ns)
 		rejects = append(rejects, rjs...)
@@ -145,5 +140,32 @@ func (m *Manager) CleanSnapshots(cfg BucketConfig) error {
 		}
 	}
 
+	return nil
+}
+
+// ListSnapshots returns a list of snapshot names managed by zsm.
+func (m *Manager) ListSnapshots() ([]Name, error) {
+	var names []Name
+
+	err := m.listSnapshots(func(name Name) {
+		names = append(names, name)
+	})
+	return names, err
+}
+
+func (m *Manager) listSnapshots(collect func(Name)) error {
+	snapshots, err := m.ZFS.List(zfs.Snapshot)
+	if err != nil {
+		return fmt.Errorf("list snapshots: %w", err)
+	}
+
+	for _, s := range snapshots {
+		name, ok := ParseName(s)
+		if !ok {
+			// snapshot was not created by us
+			continue
+		}
+		collect(name)
+	}
 	return nil
 }

@@ -145,6 +145,52 @@ func TestManager_CreateSnapshots(t *testing.T) {
 	})
 }
 
+func TestManager_ListSnapshots(t *testing.T) {
+	tests := []struct {
+		name          string
+		allSnapshots  []string
+		expectedNames []snapshot.Name
+	}{
+		{
+			name: "list all snapshots",
+			allSnapshots: []string{
+				"zfs_test@2020-04-10T09:45:58.564585005Z",
+				"zfs_test@2020-04-10T09:44:58.564585005Z",
+			},
+			expectedNames: []snapshot.Name{
+				snapshot.MustParseName(t, "zfs_test@2020-04-10T09:45:58.564585005Z"),
+				snapshot.MustParseName(t, "zfs_test@2020-04-10T09:44:58.564585005Z"),
+			},
+		},
+		{
+			name: "filter snapshots created by someone else",
+			allSnapshots: []string{
+				"zfs_test@2020-04-10T09:45:58.564585005Z",
+				"zfs_test@monday",
+				"zfs_test@important",
+			},
+			expectedNames: []snapshot.Name{
+				snapshot.MustParseName(t, "zfs_test@2020-04-10T09:45:58.564585005Z"),
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		tt := tt
+		t.Run(tt.name, func(t *testing.T) {
+			adapter := &snapshot.MockZFSAdapter{}
+			adapter.On("List", zfs.Snapshot).Return(tt.allSnapshots, nil)
+
+			sm := &snapshot.Manager{ZFS: adapter}
+			names, err := sm.ListSnapshots()
+			if !assert.NoError(t, err) {
+				return
+			}
+			assert.Equal(t, tt.expectedNames, names)
+		})
+	}
+}
+
 func TestManager_CleanSnapshots(t *testing.T) {
 	allSnapshots := []string{
 		"zfs_test@2020-04-10T09:45:58.564585005Z",

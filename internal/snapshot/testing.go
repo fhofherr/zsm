@@ -97,3 +97,16 @@ func EqualCreateOptions(t *testing.T, expectedOpts ...CreateOption) func([]Creat
 		return assert.Equal(t, expected, actual)
 	}
 }
+
+// MustParseName parses the passed snapshot name using ParseName.
+// If ParseName returns false for its second argument, MustParseName fails the
+// test.
+func MustParseName(t *testing.T, name string) Name {
+	t.Helper()
+
+	parsed, ok := ParseName(name)
+	if !ok {
+		t.Fatalf("Can't parse %s", name)
+	}
+	return parsed
+}

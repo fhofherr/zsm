@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"bytes"
 	"os"
 	"path/filepath"
 	"testing"
@@ -13,27 +14,36 @@ import (
 // TestCase tests the zsm command.
 type TestCase struct {
 	Name         string
-	MakeArgs     func(*testing.T) []string
-	MakeSMMock   func(*testing.T) *MockSnapshotManager
-	AssertSMMock func(*testing.T, *MockSnapshotManager)
+	MakeArgs     func(t *testing.T) []string
+	MakeMSM      func(t *testing.T) *MockSnapshotManager
+	AssertMSM    func(t *testing.T, msm *MockSnapshotManager)
+	AssertOutput func(t *testing.T, stdout, stderr string)
 }
 
 // Run runs the test case.
 func (tt *TestCase) Run(t *testing.T) {
+	var (
+		stdout bytes.Buffer
+		stderr bytes.Buffer
+	)
 	t.Helper()
 
 	if tt.MakeArgs == nil {
 		t.Fatal("MakeArgs not set")
 	}
-	if tt.MakeSMMock == nil {
+	if tt.MakeMSM == nil {
 		t.Fatal("MakeSMMock not set")
 	}
 
-	msm := tt.MakeSMMock(t)
+	msm := tt.MakeMSM(t)
 	msm.Test(t)
 
 	smf := mockSnapshotManagerFactory(msm)
-	zsmCmd := NewZSMCommand(WithSnapshotManagerFactory(smf))
+	zsmCmd := NewZSMCommand(
+		WithSnapshotManagerFactory(smf),
+		WithStdout(&stdout),
+		WithStderr(&stderr),
+	)
 
 	zsmCmd.SetArgs(tt.MakeArgs(t))
 	if err := zsmCmd.Execute(); err != nil {
@@ -41,8 +51,11 @@ func (tt *TestCase) Run(t *testing.T) {
 	}
 	msm.AssertExpectations(t)
 
-	if tt.AssertSMMock != nil {
-		tt.AssertSMMock(t, msm)
+	if tt.AssertMSM != nil {
+		tt.AssertMSM(t, msm)
+	}
+	if tt.AssertOutput != nil {
+		tt.AssertOutput(t, stdout.String(), stderr.String())
 	}
 }
 
@@ -93,4 +106,10 @@ func (m *MockSnapshotManager) CreateSnapshots(opts ...snapshot.CreateOption) err
 func (m *MockSnapshotManager) CleanSnapshots(cfg snapshot.BucketConfig) error {
 	args := m.Called(cfg)
 	return args.Error(0)
+}
+
+// ListSnapshots mocks the ListSnapshots method.
+func (m *MockSnapshotManager) ListSnapshots() ([]snapshot.Name, error) {
+	args := m.Called()
+	return args.Get(0).([]snapshot.Name), args.Error(1)
 }

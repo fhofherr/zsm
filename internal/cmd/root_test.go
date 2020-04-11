@@ -14,12 +14,12 @@ func TestRootCommand(t *testing.T) {
 			MakeArgs: func(t *testing.T) []string {
 				return []string{"--zfs-cmd", "path/to/zfs", "create"}
 			},
-			MakeSMMock: func(t *testing.T) *cmd.MockSnapshotManager {
+			MakeMSM: func(t *testing.T) *cmd.MockSnapshotManager {
 				sm := &cmd.MockSnapshotManager{}
 				sm.On("CreateSnapshots").Return(nil)
 				return sm
 			},
-			AssertSMMock: func(t *testing.T, msm *cmd.MockSnapshotManager) {
+			AssertMSM: func(t *testing.T, msm *cmd.MockSnapshotManager) {
 				assert.Equal(t, "path/to/zfs", msm.ZFS)
 			},
 		},
@@ -29,12 +29,12 @@ func TestRootCommand(t *testing.T) {
 				cfgFile := cmd.ConfigFile(t, "config.yaml")
 				return []string{"--config-file", cfgFile, "create"}
 			},
-			MakeSMMock: func(t *testing.T) *cmd.MockSnapshotManager {
+			MakeMSM: func(t *testing.T) *cmd.MockSnapshotManager {
 				sm := &cmd.MockSnapshotManager{}
 				sm.On("CreateSnapshots").Return(nil)
 				return sm
 			},
-			AssertSMMock: func(t *testing.T, msm *cmd.MockSnapshotManager) {
+			AssertMSM: func(t *testing.T, msm *cmd.MockSnapshotManager) {
 				assert.Equal(t, "another/path/to/zfs", msm.ZFS)
 			},
 		},
