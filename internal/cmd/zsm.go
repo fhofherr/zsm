@@ -16,12 +16,6 @@ type SnapshotManager interface {
 	CleanSnapshots(snapshot.BucketConfig) error
 }
 
-// SnapshotManagerConfig contains configuration options for configuring snapshot
-// managers.
-type SnapshotManagerConfig struct {
-	ZFS string
-}
-
 // SnapshotManagerFactory creates a SnapshotManager from SnapshotManagerConfig.
 type SnapshotManagerFactory func(*zsmCommandConfig) (SnapshotManager, error)
 
