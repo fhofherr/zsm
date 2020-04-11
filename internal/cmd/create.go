@@ -8,12 +8,12 @@ import (
 
 func newCreateCommand(cmdCfg *zsmCommandConfig) *cobra.Command {
 	createCmd := &cobra.Command{
-		Use:   "create [FILE SYSTEM]",
+		Use:   "create <FILE SYSTEM>",
 		Short: "Create snapshots for all ZFS file systems",
 		Long: `Creates snapshots for all ZFS file systems, except for those explicitly excluded.
 
-If [FILE SYSTEM] is passed, then a snapshot of only the passed file system is
-created unless [FILE SYSTEM] is marked as excluded.
+If <FILE SYSTEM> is passed, then a snapshot of only the passed file system is
+created unless <FILE SYSTEM> is marked as excluded.
 
 The created snapshots start with the same name as the dataset and are suffixed with @TIMESTAMP
 where TIMESTAMP is an RFC3339 timestamp. The time zone of the TIMESTAMP is always UTC regardles
