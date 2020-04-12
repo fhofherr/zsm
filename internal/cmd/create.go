@@ -29,7 +29,7 @@ of the system time.`,
 			if len(args) == 1 {
 				createOpts = append(createOpts, snapshot.FromFileSystem(args[0]))
 			}
-			excludes := cmdCfg.V.GetStringSlice(config.FileSystemsExclude)
+			excludes := cmdCfg.V.GetStringSlice(config.SnapshotsCreateExcludeFileSystems)
 			for _, e := range excludes {
 				createOpts = append(createOpts, snapshot.ExcludeFileSystem(e))
 			}
@@ -39,7 +39,7 @@ of the system time.`,
 
 	createCmd.Flags().StringSliceP("exclude", "e", nil,
 		"File systems to exclude when creating a snapshot.")
-	cmdCfg.V.BindPFlag(config.FileSystemsExclude, createCmd.Flags().Lookup("exclude"))
+	cmdCfg.V.BindPFlag(config.SnapshotsCreateExcludeFileSystems, createCmd.Flags().Lookup("exclude"))
 
 	return createCmd
 }

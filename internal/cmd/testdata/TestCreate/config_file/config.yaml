@@ -1,5 +1,6 @@
 ---
-filesystems:
-  exclude:
-    - "zsm_test/fs_3"
-    - "zsm_test/fs_4"
+snapshots:
+  create:
+    exclude_file_systems:
+      - "zsm_test/fs_3"
+      - "zsm_test/fs_4"

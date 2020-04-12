@@ -7,7 +7,8 @@ const (
 	ZFSCmd        = "zfs.cmd"
 	DefaultZFSCmd = "/sbin/zfs"
 
-	FileSystemsExclude = "filesystems.exclude"
+	SnapshotsCreateExcludeFileSystems = "snapshots.create.exclude_file_systems"
+	SnapshotsSendExcludeFileSystems   = "snapshots.send.exclude_file_systems"
 
 	SnapshotsKeepMinute        = "snapshots.keep.minute"
 	DefaultSnapshotsKeepMinute = 60
