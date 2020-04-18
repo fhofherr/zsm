@@ -201,3 +201,41 @@ func TestAdapter_Receive(t *testing.T) {
 	}
 	zfs.RunTests(t, tests, true)
 }
+
+func TestAdapter_Send(t *testing.T) {
+	tests := []zfs.TestCase{
+		{
+			Name: "send without reference",
+			Call: func(t *testing.T, a zfs.Adapter) error {
+				var w bytes.Buffer
+
+				if err := a.Send("fs_1@snapshot_name", "", &w); err != nil {
+					return err
+				}
+				assert.Equal(t, "snapshot data", w.String())
+				return nil
+			},
+			ZFSArgs: []string{"send", "fs_1@snapshot_name"},
+			Stdout: func(t *testing.T) []byte {
+				return []byte("snapshot data")
+			},
+		},
+		{
+			Name: "send with reference",
+			Call: func(t *testing.T, a zfs.Adapter) error {
+				var w bytes.Buffer
+
+				if err := a.Send("fs_1@snapshot_name", "fs_1@reference_name", &w); err != nil {
+					return err
+				}
+				assert.Equal(t, "snapshot data", w.String())
+				return nil
+			},
+			ZFSArgs: []string{"send", "-I", "fs_1@reference_name", "fs_1@snapshot_name"},
+			Stdout: func(t *testing.T) []byte {
+				return []byte("snapshot data")
+			},
+		},
+	}
+	zfs.RunTests(t, tests, true)
+}

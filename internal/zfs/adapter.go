@@ -58,25 +58,10 @@ func New(zfsCmdPath string) (Adapter, error) {
 // List returns an error if calling the zfs CmdFunc fails or the output could
 // not be parsed.
 func (z Adapter) List(typ ListType) ([]string, error) {
-	var (
-		stdout bytes.Buffer
-		stderr bytes.Buffer
-	)
+	var stdout bytes.Buffer
 
-	cmd := z("list", "-H", "-t", string(typ), "-o", "name")
-	cmd.Stdout = &stdout
-	cmd.Stderr = &stderr
-	if err := cmd.Run(); err != nil {
-		var exitErr *exec.ExitError
-
-		if errors.As(err, &exitErr) {
-			return nil, &Error{
-				SubCommand: "list",
-				ExitCode:   exitErr.ExitCode(),
-				Stderr:     stderr.String(),
-			}
-		}
-		return nil, fmt.Errorf("zfs list: %w", err)
+	if err := z.runCMD([]string{"list", "-H", "-t", string(typ), "-o", "name"}, nil, &stdout); err != nil {
+		return nil, err
 	}
 
 	lines := strings.Split(stdout.String(), "\n")
@@ -102,28 +87,7 @@ func (z Adapter) List(typ ListType) ([]string, error) {
 // filesystem, volume an existing zfs volume. snapname will be the name of the
 // snapshot.
 func (z Adapter) CreateSnapshot(name string) error {
-	var (
-		stdout bytes.Buffer
-		stderr bytes.Buffer
-	)
-
-	cmd := z("snapshot", name)
-	cmd.Stdout = &stdout
-	cmd.Stderr = &stderr
-
-	if err := cmd.Run(); err != nil {
-		var exitErr *exec.ExitError
-
-		if errors.As(err, &exitErr) {
-			return &Error{
-				SubCommand: "snapshot",
-				ExitCode:   exitErr.ExitCode(),
-				Stderr:     stderr.String(),
-			}
-		}
-		return fmt.Errorf("zfs snapshot: %w", err)
-	}
-	return nil
+	return z.runCMD([]string{"snapshot", name}, nil, nil)
 }
 
 // Destroy removes the zfs object with name.
@@ -131,45 +95,47 @@ func (z Adapter) CreateSnapshot(name string) error {
 // Destroy merely calls zfs destroy. Provided all conditions for destroying an
 // object are met, the object will be destroyed.
 func (z Adapter) Destroy(name string) error {
-	var stderr bytes.Buffer
-
-	cmd := z("destroy", name)
-	cmd.Stderr = &stderr
-
-	if err := cmd.Run(); err != nil {
-		var exitErr *exec.ExitError
-
-		if errors.As(err, &exitErr) {
-			return &Error{
-				SubCommand: "destroy",
-				ExitCode:   exitErr.ExitCode(),
-				Stderr:     stderr.String(),
-			}
-		}
-		return fmt.Errorf("zfs destroy: %w", err)
-	}
-	return nil
+	return z.runCMD([]string{"destroy", name}, nil, nil)
 }
 
 // Receive receives a named zfs object from r.
 func (z Adapter) Receive(name string, r io.Reader) error {
+	return z.runCMD([]string{"receive", name}, r, nil)
+}
+
+// Send writes the snapshot name to w.
+//
+// This also writes all snapshots that have been created before name. If
+// ref is not empty only snapshots between ref and name are written
+// to w.
+func (z Adapter) Send(name, ref string, w io.Writer) error {
+	args := []string{"send"}
+	if ref != "" {
+		args = append(args, "-I", ref)
+	}
+	args = append(args, name)
+	return z.runCMD(args, nil, w)
+}
+
+func (z Adapter) runCMD(args []string, stdin io.Reader, stdout io.Writer) error {
 	var stderr bytes.Buffer
 
-	cmd := z("receive", name)
+	cmd := z(args...)
+	cmd.Stdin = stdin
+	cmd.Stdout = stdout
 	cmd.Stderr = &stderr
-	cmd.Stdin = r
 
 	if err := cmd.Run(); err != nil {
 		var exitErr *exec.ExitError
 
 		if errors.As(err, &exitErr) {
 			return &Error{
-				SubCommand: "receive",
+				SubCommand: args[0],
 				ExitCode:   exitErr.ExitCode(),
 				Stderr:     stderr.String(),
 			}
 		}
-		return fmt.Errorf("zfs receive: %w", err)
+		return fmt.Errorf("zfs %s: %w", args[0], err)
 	}
 	return nil
 }
