@@ -110,6 +110,25 @@ func (h *Host) ListSnapshots() ([]snapshot.Name, error) {
 	return names, nil
 }
 
+// ReceiveSnapshot lets the remote host receive a snapshot with the passed name.
+//
+// The snapshot data is read from r. It is written to targetFS with the name
+// that is passed to ReceiveSnapshot.
+//
+// Example:
+//
+// Let a snapshot have the name zsm_test@2020-04-10T09:45:58.564585005Z and
+// targetFS the value target_fs.
+//
+// The remote host then writes the snapshot to target_fs/zsm_test@2020-04-10T09:45:58.564585005Z
+func (h *Host) ReceiveSnapshot(targetFS string, name snapshot.Name, r io.Reader) error {
+	zsmRecvCmd := fmt.Sprintf("%s receive %s %s", h.RemoteZSM, targetFS, name)
+	if err := h.runRemoteZSM(zsmRecvCmd, nil, r); err != nil {
+		return err
+	}
+	return nil
+}
+
 func (h *Host) runRemoteZSM(cmd string, stdout io.Writer, stdin io.Reader) error {
 	var stderr bytes.Buffer
 

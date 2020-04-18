@@ -305,7 +305,7 @@ func sshSessionHandler(
 	}
 	handleStdin := func(stdin io.Reader) {
 		bs, err := ioutil.ReadAll(stdin)
-		if err != nil {
+		if err != nil && err != io.EOF {
 			sendErr(err)
 			return
 		}
@@ -317,7 +317,7 @@ func sshSessionHandler(
 		if commandC != nil {
 			commandC <- append([]string(nil), sess.Command()...)
 		}
-		go handleStdin(sess)
+		handleStdin(sess)
 		if _, err := sess.Write(stdout); err != nil {
 			sendErr(err)
 			return

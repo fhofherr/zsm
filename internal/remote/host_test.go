@@ -120,3 +120,52 @@ func TestHost_ListSnapshots(t *testing.T) {
 	}
 	remote.RunTests(t, tests)
 }
+
+func TestHost_ReceiveSnapshot(t *testing.T) {
+	tests := []remote.TestCase{
+		{
+			Name: "receive snapshot data",
+			Call: func(t *testing.T, host *remote.Host) error {
+				if err := host.Dial(); err != nil {
+					t.Fatal(err)
+				}
+				defer host.Close()
+
+				name := snapshot.MustParseName(t, "zsm_test@2020-04-10T09:45:58.564585005Z")
+				data := bytes.NewReader([]byte("this is the snapshot data"))
+				return host.ReceiveSnapshot("target_fs", name, data)
+			},
+			ZSMCommand: []string{
+				"/path/to/remote/zsm",
+				"receive",
+				"target_fs",
+				"zsm_test@2020-04-10T09:45:58.564585005Z",
+			},
+			Stdin: func(t *testing.T) []byte {
+				return []byte("this is the snapshot data")
+			},
+		},
+		{
+			Name: "remote host returns error",
+			Call: func(t *testing.T, host *remote.Host) error {
+				if err := host.Dial(); err != nil {
+					t.Fatal(err)
+				}
+				defer host.Close()
+
+				name := snapshot.MustParseName(t, "zsm_test@2020-04-10T09:45:58.564585005Z")
+				data := bytes.NewReader([]byte("this is the snapshot data"))
+				return host.ReceiveSnapshot("target_fs", name, data)
+			},
+			ZSMExitCode: 10,
+			Stderr: func(t *testing.T) []byte {
+				return []byte("remote zsm receive wrote this to stderr")
+			},
+			Stdin: func(t *testing.T) []byte {
+				return []byte("this is the snapshot data")
+			},
+		},
+	}
+
+	remote.RunTests(t, tests)
+}
