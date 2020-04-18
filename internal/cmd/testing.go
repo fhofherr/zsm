@@ -63,6 +63,7 @@ func (tt *TestCase) run(t *testing.T) {
 func RunTests(t *testing.T, tests []TestCase) {
 	t.Helper()
 	for _, tt := range tests {
+		tt := tt
 		t.Run(tt.Name, tt.run)
 	}
 }
