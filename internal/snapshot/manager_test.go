@@ -303,3 +303,82 @@ func TestManager_ReceiveSnapshot_Errors(t *testing.T) {
 		})
 	}
 }
+
+func TestManager_SendSnapshot(t *testing.T) {
+	type testCase struct {
+		name string
+		sn   snapshot.Name
+		ref  snapshot.Name
+		mock func(*testing.T, *testCase, *snapshot.MockZFSAdapter)
+		call func(*testing.T, *testCase, *snapshot.Manager) error
+		out  bytes.Buffer
+	}
+	tests := []testCase{
+		{
+			name: "snapshot does not exist",
+			sn:   snapshot.Name{FileSystem: "missing", Timestamp: time.Now().UTC()},
+			mock: func(t *testing.T, tt *testCase, a *snapshot.MockZFSAdapter) {
+				a.On("List", zfs.Snapshot).Return([]string(nil), nil)
+			},
+			call: func(t *testing.T, tt *testCase, sm *snapshot.Manager) error {
+				err := sm.SendSnapshot(tt.sn, &tt.out)
+				if !assert.EqualError(t, err, fmt.Sprintf("send snapshot: does not exist: %s", tt.sn)) {
+					return err
+				}
+				return nil
+			},
+		},
+		{
+			name: "no reference",
+			sn:   snapshot.Name{FileSystem: "zsm_test", Timestamp: time.Now().UTC()},
+			mock: func(t *testing.T, tt *testCase, a *snapshot.MockZFSAdapter) {
+				a.On("List", zfs.Snapshot).Return([]string{tt.sn.String()}, nil)
+				a.On("Send", tt.sn.String(), "", &tt.out).Return(nil)
+			},
+			call: func(t *testing.T, tt *testCase, sm *snapshot.Manager) error {
+				return sm.SendSnapshot(tt.sn, &tt.out)
+			},
+		},
+		{
+			name: "with reference",
+			sn:   snapshot.Name{FileSystem: "zsm_test", Timestamp: time.Now().UTC()},
+			ref:  snapshot.Name{FileSystem: "zsm_test", Timestamp: time.Now().UTC().Add(-time.Hour)},
+			mock: func(t *testing.T, tt *testCase, a *snapshot.MockZFSAdapter) {
+				a.On("List", zfs.Snapshot).Return([]string{tt.sn.String(), tt.ref.String()}, nil)
+				a.On("Send", tt.sn.String(), tt.ref.String(), &tt.out).Return(nil)
+			},
+			call: func(t *testing.T, tt *testCase, sm *snapshot.Manager) error {
+				return sm.SendSnapshot(tt.sn, &tt.out, snapshot.Reference(tt.ref))
+			},
+		},
+		{
+			name: "reference does not exist",
+			sn:   snapshot.Name{FileSystem: "zsm_test", Timestamp: time.Now().UTC()},
+			ref:  snapshot.Name{FileSystem: "zsm_test", Timestamp: time.Now().UTC().Add(-time.Hour)},
+			mock: func(t *testing.T, tt *testCase, a *snapshot.MockZFSAdapter) {
+				a.On("List", zfs.Snapshot).Return([]string{tt.sn.String()}, nil)
+			},
+			call: func(t *testing.T, tt *testCase, sm *snapshot.Manager) error {
+				err := sm.SendSnapshot(tt.sn, &tt.out, snapshot.Reference(tt.ref))
+				if !assert.EqualError(t, err, fmt.Sprintf("send snapshot: reference does not exist: %s", tt.sn)) {
+					return err
+				}
+				return nil
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		tt := tt
+		t.Run(tt.name, func(t *testing.T) {
+			adapter := &snapshot.MockZFSAdapter{}
+			adapter.Test(t)
+			tt.mock(t, &tt, adapter)
+
+			sm := &snapshot.Manager{ZFS: adapter}
+			err := tt.call(t, &tt, sm)
+			assert.NoError(t, err)
+			adapter.AssertExpectations(t)
+		})
+	}
+}

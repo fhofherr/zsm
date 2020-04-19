@@ -39,6 +39,12 @@ func (m *MockZFSAdapter) Receive(name string, r io.Reader) error {
 	return args.Error(0)
 }
 
+// Send registers a call to zfs send.
+func (m *MockZFSAdapter) Send(name, ref string, w io.Writer) error {
+	args := m.Called(name, ref, w)
+	return args.Error(0)
+}
+
 // AssertNameFormat asserts that the passed snapName has the expected format
 // for a snapshot of a filesystem with name fsName.
 func AssertNameFormat(t *testing.T, fsName, snapName string) bool {

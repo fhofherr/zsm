@@ -17,6 +17,7 @@ type ZFSAdapter interface {
 	List(zfs.ListType) ([]string, error)
 	Destroy(string) error
 	Receive(string, io.Reader) error
+	Send(string, string, io.Writer) error
 }
 
 // CreateOption modifies the way CreateSnapshot creates a snapshot of one
@@ -46,6 +47,20 @@ func ExcludeFileSystem(fsName string) CreateOption {
 		}
 		fsName = strings.TrimPrefix(fsName, "/")
 		o.ExcludedFileSystems[fsName] = true
+	}
+}
+
+// SendOption configures the way SendSnapshot sends a snapshot to a remote host.
+type SendOption func(*sendOpts)
+
+type sendOpts struct {
+	Reference Name
+}
+
+// Reference sets the name of the reference snapshot when sending snapshots.
+func Reference(name Name) SendOption {
+	return func(opts *sendOpts) {
+		opts.Reference = name
 	}
 }
 
@@ -210,4 +225,42 @@ func (m *Manager) ReceiveSnapshot(targetFS string, name Name, r io.Reader) error
 		return fmt.Errorf("receive snapshot: %w", err)
 	}
 	return nil
+}
+
+// SendSnapshot writes the snapshot identified by name to w.
+//
+// By passing the Reference option only data changed between the passed
+// reference and name is written to w.
+func (m *Manager) SendSnapshot(name Name, w io.Writer, opts ...SendOption) error {
+	var (
+		snExists, refExists bool
+		sOpts               sendOpts
+		ref                 string
+	)
+
+	for _, opt := range opts {
+		opt(&sOpts)
+	}
+	if (sOpts.Reference != Name{}) {
+		ref = sOpts.Reference.String()
+	}
+
+	err := m.listSnapshots(func(n Name) {
+		if n == name {
+			snExists = true
+		}
+		if n == sOpts.Reference {
+			refExists = true
+		}
+	})
+	if err != nil {
+		return err
+	}
+	if !snExists {
+		return fmt.Errorf("send snapshot: does not exist: %s", name)
+	}
+	if ref != "" && !refExists {
+		return fmt.Errorf("send snapshot: reference does not exist: %s", name)
+	}
+	return m.ZFS.Send(name.String(), ref, w)
 }
