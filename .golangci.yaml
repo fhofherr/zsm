@@ -19,6 +19,7 @@ linters:
     - gocritic
     - gocyclo
     - goimports
+    - golint
     - gosec
     - gosimple
     - govet
@@ -37,6 +38,9 @@ linters:
     - whitespace
 
 issues:
+  include:
+    - EXC0002  # disable excluding of issues about comments from golint
+
   exclude-rules:
     - path: _test\.go
       linters:
