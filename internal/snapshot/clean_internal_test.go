@@ -17,7 +17,7 @@ func TestBucket_Add_HonorsInterval(t *testing.T) {
 		out    []Name
 	}
 	end := Name{
-		Timestamp:  time.Now().UTC(),
+		Timestamp:  MustParseTime(t, time.RFC3339, "2020-04-14T17:11:16Z"),
 		FileSystem: "zsm_test",
 	}
 	tests := []test{

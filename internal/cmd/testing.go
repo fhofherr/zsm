@@ -2,22 +2,20 @@ package cmd
 
 import (
 	"bytes"
-	"io"
 	"os"
 	"path/filepath"
 	"testing"
 
 	"github.com/fhofherr/zsm/internal/config"
 	"github.com/fhofherr/zsm/internal/snapshot"
-	"github.com/stretchr/testify/mock"
 )
 
 // TestCase tests the zsm command.
 type TestCase struct {
 	Name         string
 	MakeArgs     func(t *testing.T) []string
-	MakeMSM      func(t *testing.T) *MockSnapshotManager
-	AssertMSM    func(t *testing.T, msm *MockSnapshotManager)
+	MakeMSM      func(t *testing.T) *snapshot.MockManager
+	AssertMSM    func(t *testing.T, msm *snapshot.MockManager)
 	AssertOutput func(t *testing.T, stdout, stderr string)
 }
 
@@ -50,6 +48,8 @@ func (tt *TestCase) run(t *testing.T) {
 		t.Errorf("zsm failed: %v", err)
 	}
 	msm.AssertExpectations(t)
+	msm.AssertCreateOptions(t)
+	msm.AssertSendOptions(t)
 
 	if tt.AssertMSM != nil {
 		tt.AssertMSM(t, msm)
@@ -78,45 +78,9 @@ func ConfigFile(t *testing.T, name string) string {
 	return cfgFile
 }
 
-func mockSnapshotManagerFactory(msm *MockSnapshotManager) SnapshotManagerFactory {
+func mockSnapshotManagerFactory(msm *snapshot.MockManager) SnapshotManagerFactory {
 	return func(cfg *zsmCommandConfig) (SnapshotManager, error) {
 		msm.ZFS = cfg.V.GetString(config.ZFSCmd)
 		return msm, nil
 	}
-}
-
-// MockSnapshotManager is a mock implementation of the SnapshotManager interface.
-type MockSnapshotManager struct {
-	mock.Mock
-
-	ZFS string
-}
-
-// CreateSnapshots registers a call to CreateSnapshots.
-func (m *MockSnapshotManager) CreateSnapshots(opts ...snapshot.CreateOption) error {
-	var args mock.Arguments
-	if opts == nil {
-		args = m.Called()
-	} else {
-		args = m.Called(opts)
-	}
-	return args.Error(0)
-}
-
-// CleanSnapshots registers a call to CleanSnapshots.
-func (m *MockSnapshotManager) CleanSnapshots(cfg snapshot.BucketConfig) error {
-	args := m.Called(cfg)
-	return args.Error(0)
-}
-
-// ListSnapshots mocks the ListSnapshots method.
-func (m *MockSnapshotManager) ListSnapshots() ([]snapshot.Name, error) {
-	args := m.Called()
-	return args.Get(0).([]snapshot.Name), args.Error(1)
-}
-
-// ReceiveSnapshot mocks the ReceiveSnapshot method.
-func (m *MockSnapshotManager) ReceiveSnapshot(targetFS string, name snapshot.Name, r io.Reader) error {
-	args := m.Called(targetFS, name, r)
-	return args.Error(0)
 }

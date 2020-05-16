@@ -2,6 +2,7 @@ package snapshot
 
 import (
 	"io"
+	"math/rand"
 	"testing"
 	"time"
 
@@ -111,6 +112,15 @@ func EqualCreateOptions(t *testing.T, expectedOpts ...CreateOption) func([]Creat
 	}
 }
 
+// ShuffleNamesC returns a shuffled copy of names.
+func ShuffleNamesC(names []Name) []Name {
+	shuffled := append([]Name{}, names...)
+	rand.Shuffle(len(shuffled), func(i, j int) {
+		shuffled[i], shuffled[j] = shuffled[j], shuffled[i]
+	})
+	return shuffled
+}
+
 // MustParseName parses the passed snapshot name using ParseName.
 // If ParseName returns false for its second argument, MustParseName fails the
 // test.
@@ -122,4 +132,97 @@ func MustParseName(t *testing.T, name string) Name {
 		t.Fatalf("Can't parse %s", name)
 	}
 	return parsed
+}
+
+// MustParseTime parses the passed value as a time.Time according to layout.
+// It fails the test if the value cannot be parsed.
+func MustParseTime(t *testing.T, layout, value string) time.Time {
+	t.Helper()
+
+	ts, err := time.Parse(layout, value)
+	if err != nil {
+		t.Fatalf("Parse time %s: %v", value, err)
+	}
+	return ts
+}
+
+// MockManager is a mock for Manager and provides the same methods.
+//
+// MockManager is useful across various packages. It is therefore defined
+// once in the snapshot package and not in the packages, that use the
+// functionality.
+type MockManager struct {
+	mock.Mock
+
+	ZFS string
+
+	expectedCreateOpts createOpts
+	actualCreateOpts   createOpts
+
+	expectedSendOpts sendOpts
+	actualSendOpts   sendOpts
+}
+
+// CreateSnapshots registers a call to CreateSnapshots.
+func (m *MockManager) CreateSnapshots(opts ...CreateOption) error {
+	callArgs := make([]interface{}, len(opts))
+	for i, opt := range opts {
+		callArgs[i] = opt
+		opt(&m.actualCreateOpts)
+	}
+	args := m.Called(callArgs...)
+	return args.Error(0)
+}
+
+// ExpectCreateOptions sets the CreateOptions expected when CreateSnapshot is called.
+func (m *MockManager) ExpectCreateOptions(opts ...CreateOption) {
+	for _, opt := range opts {
+		opt(&m.expectedCreateOpts)
+	}
+}
+
+// AssertCreateOptions asserts that the expected send options were actually passed.
+func (m *MockManager) AssertCreateOptions(t *testing.T) bool {
+	return assert.Equal(t, m.expectedCreateOpts, m.actualCreateOpts)
+}
+
+// CleanSnapshots registers a call to CleanSnapshots.
+func (m *MockManager) CleanSnapshots(cfg BucketConfig) error {
+	args := m.Called(cfg)
+	return args.Error(0)
+}
+
+// ListSnapshots registers a call to ListSnapshots.
+func (m *MockManager) ListSnapshots() ([]Name, error) {
+	args := m.Called()
+	return args.Get(0).([]Name), args.Error(1)
+}
+
+// ReceiveSnapshot registers a call to ReceiveSnapshot.
+func (m *MockManager) ReceiveSnapshot(targetFS string, name Name, r io.Reader) error {
+	args := m.Called(targetFS, name, r)
+	return args.Error(0)
+}
+
+// SendSnapshot registers a call to SendSnapshot.
+func (m *MockManager) SendSnapshot(name Name, w io.Writer, opts ...SendOption) error {
+	callArgs := []interface{}{name, w}
+	for _, opt := range opts {
+		callArgs = append(callArgs, opt)
+		opt(&m.actualSendOpts)
+	}
+	args := m.Called(callArgs...)
+	return args.Error(0)
+}
+
+// ExpectSendOptions sets the SendOptions expected when SendSnapshot is called.
+func (m *MockManager) ExpectSendOptions(opts ...SendOption) {
+	for _, opt := range opts {
+		opt(&m.expectedSendOpts)
+	}
+}
+
+// AssertSendOptions asserts that the expected send options were actually passed.
+func (m *MockManager) AssertSendOptions(t *testing.T) bool {
+	return assert.Equal(t, m.expectedSendOpts, m.actualSendOpts)
 }

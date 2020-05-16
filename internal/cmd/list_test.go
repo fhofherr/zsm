@@ -16,12 +16,12 @@ func TestList(t *testing.T) {
 			MakeArgs: func(t *testing.T) []string {
 				return []string{"list"}
 			},
-			MakeMSM: func(t *testing.T) *cmd.MockSnapshotManager {
+			MakeMSM: func(t *testing.T) *snapshot.MockManager {
 				sns := []snapshot.Name{
 					snapshot.MustParseName(t, "zfs_test@2020-04-10T09:45:58.564585005Z"),
 					snapshot.MustParseName(t, "zfs_test@2020-04-10T09:44:58.564585005Z"),
 				}
-				sm := &cmd.MockSnapshotManager{}
+				sm := &snapshot.MockManager{}
 				sm.On("ListSnapshots").Return(sns, nil)
 
 				return sm
@@ -41,12 +41,12 @@ func TestList(t *testing.T) {
 			MakeArgs: func(t *testing.T) []string {
 				return []string{"list", "-o", "jsonl"}
 			},
-			MakeMSM: func(t *testing.T) *cmd.MockSnapshotManager {
+			MakeMSM: func(t *testing.T) *snapshot.MockManager {
 				sns := []snapshot.Name{
 					snapshot.MustParseName(t, "zfs_test@2020-04-10T09:45:58.564585005Z"),
 					snapshot.MustParseName(t, "zfs_test@2020-04-10T09:44:58.564585005Z"),
 				}
-				sm := &cmd.MockSnapshotManager{}
+				sm := &snapshot.MockManager{}
 				sm.On("ListSnapshots").Return(sns, nil)
 
 				return sm

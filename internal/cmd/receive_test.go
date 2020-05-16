@@ -15,10 +15,10 @@ func TestReceive(t *testing.T) {
 			MakeArgs: func(t *testing.T) []string {
 				return []string{"receive", "target_fs", "zsm_test@2020-04-10T09:45:58.564585005Z"}
 			},
-			MakeMSM: func(t *testing.T) *cmd.MockSnapshotManager {
+			MakeMSM: func(t *testing.T) *snapshot.MockManager {
 				name := snapshot.MustParseName(t, "zsm_test@2020-04-10T09:45:58.564585005Z")
 
-				sm := &cmd.MockSnapshotManager{}
+				sm := &snapshot.MockManager{}
 				sm.On("ReceiveSnapshot", "target_fs", name, os.Stdin).Return(nil)
 				return sm
 			},
