@@ -113,6 +113,7 @@ func NewZSMCommand(opts ...ZSMCommandOption) *cobra.Command {
 	rootCmd.AddCommand(newListCommand(cmdCfg))
 	rootCmd.AddCommand(newReceiveCommand(cmdCfg))
 	rootCmd.AddCommand(newSendCommand(cmdCfg))
+	rootCmd.AddCommand(newVersionCommand(cmdCfg))
 
 	return rootCmd
 }
