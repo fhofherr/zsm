@@ -1,0 +1,41 @@
+---
+project_name: zsm
+
+before:
+  hooks:
+    - go mod download
+
+builds:
+  - id: zsm
+    main: ./cmd/zsm/main.go
+    binary: zsm
+    goos:
+      - linux
+    goarch:
+      - amd64
+    env:
+      - CGO_ENABLED=0
+    ldflags:
+      - "-X github.com/fhofherr/zsm/internal/build.Version={{ .Version }}"
+      - "-X github.com/fhofherr/zsm/internal/build.Commit={{ .FullCommit }}"
+      - "-X github.com/fhofherr/zsm/internal/build.Date={{ .Date }}"
+
+archives:
+  - id: zsm
+    builds:
+      - zsm
+    wrap_in_directory: true
+    format: tar.gz
+    files:
+      - README.md
+      - CHANGELOG.md
+      - LICENSE
+
+release:
+  github:
+    owner: fhofherr
+    name: zsm
+  ids:
+    - zsm
+  draft: true
+  prerelease: auto
